@@ -276,37 +276,38 @@ fn is_openable_page(path: &Path) -> bool {
     is_markdown(path) || is_pdf(path) || is_html(path)
 }
 
-/// Extract text content from a PDF file using the pdf-extract crate.
-/// This handles compressed PDFs and properly extracts text from content streams.
+/// Extract text content from a PDF file using the pdf-extract crate,
+/// then apply Markdown structure inference and paragraph consolidation.
 fn extract_pdf_text(path: &Path) -> Result<String> {
     let bytes = fs::read(path)?;
     
-    match pdf_extract::extract_text_from_mem(&bytes) {
+    let raw_text = match pdf_extract::extract_text_from_mem(&bytes) {
         Ok(text) => {
             let trimmed = text.trim();
             if trimmed.is_empty() {
                 // PDF exists but has no extractable text (e.g., scanned image-only PDF)
-                Err(AppError::Message(format!(
+                return Err(AppError::Message(format!(
                     "PDF file '{}' contains no extractable text (possibly a scanned document)",
                     path.file_name().and_then(|n| n.to_str()).unwrap_or("document")
-                )))
-            } else {
-                Ok(text)
+                )));
             }
+            text
         }
         Err(_e) => {
             // pdf-extract failed, try naive BT/ET fallback for simple test PDFs
             let text = extract_pdf_text_naive(&bytes);
             if text.trim().is_empty() {
-                Err(AppError::Message(format!(
+                return Err(AppError::Message(format!(
                     "Failed to extract text from PDF '{}'",
                     path.file_name().and_then(|n| n.to_str()).unwrap_or("document")
-                )))
-            } else {
-                Ok(text)
+                )));
             }
+            text
         }
-    }
+    };
+    
+    // Apply structure inference and paragraph consolidation
+    Ok(crate::pdf_extractor::add_structure_and_reflow(&raw_text))
 }
 
 /// Naive PDF text extraction for simple hand-crafted test PDFs.
@@ -1057,6 +1058,62 @@ mod tests {
         println!("Extracted PDF text: {}", text);
         assert!(text.contains("Nested PDF Fixture"), 
             "Expected 'Nested PDF Fixture' in extracted text, got: {}", text);
+    }
+
+    #[test]
+    fn pdf_structure_and_reflow_external() {
+        // This test uses an external PDF to verify structure extraction and paragraph consolidation.
+        // The PDF is not committed to the repo due to size.
+        // To run: place cadence-travel-ai-risk-and-readiness-2026-09-26-2ecp_3a5c.pdf in /tmp/cadence-test.pdf
+        let test_pdf = Path::new("/tmp/cadence-test.pdf");
+        
+        if !test_pdf.exists() {
+            eprintln!("Skipping pdf_structure_and_reflow_external: test PDF not found at /tmp/cadence-test.pdf");
+            return;
+        }
+        
+        let text = extract_pdf_text(test_pdf).unwrap();
+        
+        // Verify text was extracted
+        assert!(!text.is_empty(), "PDF text should not be empty");
+        assert!(text.len() > 10000, "PDF should extract substantial text, got {} chars", text.len());
+        
+        // Verify structure: should have Markdown headings
+        let h1_count = text.matches("\n# ").count();
+        let h2_count = text.matches("\n## ").count();
+        let h3_count = text.matches("\n### ").count();
+        let total_headings = h1_count + h2_count + h3_count;
+        
+        println!("PDF extraction: {} chars, {} H1, {} H2, {} H3 (total {} headings)",
+            text.len(), h1_count, h2_count, h3_count, total_headings);
+        
+        assert!(total_headings > 0, "Expected at least some Markdown headings, got none");
+        assert!(h1_count < 100, "Too many H1 headings ({}), heuristics too aggressive", h1_count);
+        
+        // Verify paragraph consolidation: find a known body paragraph starting with "Cadence's biggest"
+        if let Some(pos) = text.find("Cadence's biggest") {
+            // Look for this specific paragraph
+            let sample_start = text[..pos].rfind("\n\n").map(|p| p + 2).unwrap_or(pos);
+            let sample_end = text[pos..].find("\n\n").map(|p| pos + p).unwrap_or(text.len());
+            let paragraph = &text[sample_start..sample_end];
+            
+            println!("\nSample body paragraph ({} chars):\n{}\n", 
+                paragraph.len(), 
+                &paragraph[..paragraph.len().min(400)]);
+            
+            // This paragraph should be consolidated into flowing prose (multiple sentences, 400+ chars)
+            assert!(paragraph.len() > 300, 
+                "Expected consolidated paragraph (>300 chars), got {} chars", 
+                paragraph.len());
+            assert!(paragraph.contains("Commission bookings") && paragraph.contains("advisors"),
+                "Expected known paragraph content");
+            println!("✓ Paragraph consolidated ({} chars, spans multiple sentences)", paragraph.len());
+        }
+        
+        // Verify recognizable content
+        let lower_text = text.to_lowercase();
+        assert!(lower_text.contains("cadence") || lower_text.contains("ai"),
+            "Expected recognizable PDF content");
     }
 
     #[test]

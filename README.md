@@ -59,9 +59,9 @@ Click a link or a tree row to open the page here. ⌘‑click opens it beside (t
 
 **From Finder.** The built app registers as an app for `.md` files, so a double‑click, Open With, or a drop on the Dock icon opens the file as a session here; if the app is not running, that file wins over "Open at launch". To make Nested the default for Markdown, use Settings › General › Markdown files (the Home screen offers it once, too). macOS may ask you to confirm, and the switch needs the built `Nested.app` (a copy in Applications is best), not `pnpm tauri dev`.
 
-**PDF and HTML support.** Nested can also open `.pdf`, `.html`, and `.htm` files alongside Markdown files. Text content is extracted from PDFs and HTML for reading, asking, and searching. PDF and HTML files are read-only: **Refine**, **New Page**, and **Deep Dive** work normally and create new `.md` files, but the original PDF or HTML file is never modified. Use ⌘O or ⌘⇧O to add PDF/HTML files to your session, or drop them into the window.
+**PDF and HTML support.** Nested can also open `.pdf`, `.html`, and `.htm` files alongside Markdown files. Text content is extracted from PDFs and HTML for reading, asking, and searching. PDF extraction includes **structure inference and paragraph consolidation**: headings are detected from typography (ALL CAPS, spacing patterns) and rendered as Markdown `#`/`##`/`###`, while mid-paragraph line breaks from PDF visual layout are joined into flowing prose. PDF and HTML files are read-only: **Refine**, **New Page**, and **Deep Dive** work normally and create new `.md` files, but the original PDF or HTML file is never modified. Use ⌘O or ⌘⇧O to add PDF/HTML files to your session, or drop them into the window.
 
-PDF text extraction uses the `pdf-extract` crate and handles compressed PDFs properly. Scanned image-only PDFs without embedded text will not extract successfully (OCR is not supported).
+PDF text extraction uses the `pdf-extract` crate and handles compressed PDFs properly. Scanned image-only PDFs without embedded text will not extract successfully (OCR is not supported). Structure inference is best-effort based on typography; complex layouts may not preserve all document hierarchy.
 
 ## Send feedback
 
