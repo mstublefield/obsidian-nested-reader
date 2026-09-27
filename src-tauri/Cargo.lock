@@ -2473,6 +2473,7 @@ dependencies = [
 name = "nested"
 version = "0.2.16"
 dependencies = [
+ "base64 0.22.1",
  "block2",
  "chrono",
  "freshjuice-tauri-aptabase",

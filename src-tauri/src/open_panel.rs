@@ -18,7 +18,13 @@ pub fn folder_or_markdown(message: &str, multiple: bool) -> Vec<String> {
     panel.setResolvesAliases(true);
     panel.setMessage(Some(&NSString::from_str(message)));
     // Only files are filtered; folders stay selectable. The typed replacement needs UTType.
-    let types = NSArray::from_retained_slice(&[NSString::from_str("md"), NSString::from_str("markdown")]);
+    let types = NSArray::from_retained_slice(&[
+        NSString::from_str("md"),
+        NSString::from_str("markdown"),
+        NSString::from_str("pdf"),
+        NSString::from_str("html"),
+        NSString::from_str("htm"),
+    ]);
     #[allow(deprecated)]
     panel.setAllowedFileTypes(Some(&types));
     if panel.runModal() != NSModalResponseOK {

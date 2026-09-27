@@ -78,11 +78,19 @@ pub fn list_pages(folder: &str) -> Result<Vec<RawPage>> {
             continue;
         }
         let path = entry.path();
-        if !is_markdown(path) {
+        if !is_openable_page(path) {
             continue;
         }
         let Some(rel) = rel_string(root, path) else { continue };
-        let raw = fs::read_to_string(path)?;
+        let raw = if is_markdown(path) {
+            fs::read_to_string(path)?
+        } else if is_pdf(path) {
+            extract_pdf_text(path)?
+        } else if is_html(path) {
+            extract_html_text(path)?
+        } else {
+            continue;
+        };
         let meta = entry.metadata().ok();
         out.push(RawPage {
             path: rel,
@@ -97,7 +105,15 @@ pub fn list_pages(folder: &str) -> Result<Vec<RawPage>> {
 
 pub fn read_page(folder: &str, rel: &str) -> Result<RawPage> {
     let full = safe_join(folder, rel)?;
-    let raw = fs::read_to_string(&full)?;
+    let raw = if is_markdown(&full) {
+        fs::read_to_string(&full)?
+    } else if is_pdf(&full) {
+        extract_pdf_text(&full)?
+    } else if is_html(&full) {
+        extract_html_text(&full)?
+    } else {
+        return Err(AppError::Message(format!("Unsupported file type: {}", rel)));
+    };
     let meta = fs::metadata(&full).ok();
     Ok(RawPage {
         path: rel.to_string(),
@@ -124,6 +140,13 @@ pub fn write_atomic(full: &Path, content: &str) -> Result<()> {
 
 pub fn write_page(folder: &str, rel: &str, content: &str) -> Result<()> {
     let full = safe_join(folder, rel)?;
+    // PDF and HTML files are read-only; prevent writing to them
+    if is_pdf(&full) || is_html(&full) {
+        return Err(AppError::Message(format!(
+            "Cannot write to read-only file type: {}. Create a companion .md file instead.",
+            rel
+        )));
+    }
     write_atomic(&full, content)
 }
 
@@ -224,7 +247,7 @@ pub fn path_kind(path: &str) -> &'static str {
     let p = Path::new(path);
     if p.is_dir() {
         "folder"
-    } else if p.is_file() && is_markdown(p) {
+    } else if p.is_file() && is_openable_page(p) {
         "file"
     } else {
         "other"
@@ -235,6 +258,117 @@ fn is_markdown(path: &Path) -> bool {
     path.extension()
         .map(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("markdown"))
         .unwrap_or(false)
+}
+
+fn is_pdf(path: &Path) -> bool {
+    path.extension()
+        .map(|e| e.eq_ignore_ascii_case("pdf"))
+        .unwrap_or(false)
+}
+
+fn is_html(path: &Path) -> bool {
+    path.extension()
+        .map(|e| e.eq_ignore_ascii_case("html") || e.eq_ignore_ascii_case("htm"))
+        .unwrap_or(false)
+}
+
+fn is_openable_page(path: &Path) -> bool {
+    is_markdown(path) || is_pdf(path) || is_html(path)
+}
+
+/// Extract text content from a PDF file.
+/// This is a basic implementation that extracts visible text from PDF content streams.
+/// It won't work for all PDFs but handles simple cases.
+fn extract_pdf_text(path: &Path) -> Result<String> {
+    let bytes = fs::read(path)?;
+    let content = String::from_utf8_lossy(&bytes);
+    
+    // Look for text between BT (begin text) and ET (end text) operators
+    let mut text = String::new();
+    let mut in_text = false;
+    
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == "BT" {
+            in_text = true;
+        } else if trimmed == "ET" {
+            in_text = false;
+            text.push('\n');
+        } else if in_text {
+            // Look for text in parentheses: (text) Tj
+            if let Some(start) = trimmed.find('(') {
+                if let Some(end) = trimmed[start..].find(')') {
+                    let extracted = &trimmed[start + 1..start + end];
+                    text.push_str(extracted);
+                    text.push(' ');
+                }
+            }
+        }
+    }
+    
+    if text.trim().is_empty() {
+        // Fallback: return a message indicating the PDF is binary
+        return Ok(format!("[PDF file: {}]\n\nThis PDF file contains binary content that cannot be easily extracted as plain text.", 
+            path.file_name().and_then(|n| n.to_str()).unwrap_or("document")));
+    }
+    
+    Ok(text)
+}
+
+/// Extract text content from an HTML file.
+/// Simple HTML-to-text conversion that strips tags and decodes entities.
+fn extract_html_text(path: &Path) -> Result<String> {
+    let html = fs::read_to_string(path)?;
+    
+    // Remove script and style tags and their content
+    let mut cleaned = html.clone();
+    while let Some(start) = cleaned.find("<script") {
+        if let Some(end) = cleaned[start..].find("</script>") {
+            cleaned.replace_range(start..start + end + 9, "");
+        } else {
+            break;
+        }
+    }
+    while let Some(start) = cleaned.find("<style") {
+        if let Some(end) = cleaned[start..].find("</style>") {
+            cleaned.replace_range(start..start + end + 8, "");
+        } else {
+            break;
+        }
+    }
+    
+    // Replace HTML tags with spaces
+    let mut result = String::new();
+    let mut in_tag = false;
+    for c in cleaned.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => {
+                in_tag = false;
+                result.push(' ');
+            }
+            _ if !in_tag => result.push(c),
+            _ => {}
+        }
+    }
+    
+    // Decode common HTML entities
+    result = result
+        .replace("&nbsp;", " ")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'");
+    
+    // Normalize whitespace
+    let text: String = result
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    
+    Ok(text)
 }
 
 pub fn list_versions(folder: &str, rel: &str) -> Result<Vec<VersionInfo>> {
@@ -881,5 +1015,140 @@ mod tests {
         assert_eq!(resolved.remaps, vec![("a.md".into(), "b.md".into())]);
         assert_eq!(fs::read_to_string(dir.path().join(".reader/versions/a/v1.md")).unwrap(), "from-a\n");
         assert_eq!(fs::read_to_string(dir.path().join(".reader/versions/b/v1.md")).unwrap(), "from-b\n");
+    }
+
+    #[test]
+    fn list_pages_includes_pdf_files() {
+        let dir = folder();
+        write_md(dir.path(), "a.md", "# Markdown\n");
+        // Create a minimal valid PDF
+        let pdf_content = b"%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj
+4 0 obj<</Length 44>>stream
+BT /F1 12 Tf 50 700 Td (Test PDF) Tj ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000052 00000 n 
+0000000101 00000 n 
+0000000184 00000 n 
+trailer<</Size 5/Root 1 0 R>>
+startxref
+277
+%%EOF";
+        fs::write(dir.path().join("test.pdf"), pdf_content).unwrap();
+        
+        let folder = dir.path().to_str().unwrap();
+        let pages = list_pages(folder).unwrap();
+        assert_eq!(pages.len(), 2);
+        let paths: Vec<&str> = pages.iter().map(|p| p.path.as_str()).collect();
+        assert!(paths.contains(&"a.md"));
+        assert!(paths.contains(&"test.pdf"));
+    }
+
+    #[test]
+    fn list_pages_includes_html_files() {
+        let dir = folder();
+        write_md(dir.path(), "a.md", "# Markdown\n");
+        fs::write(
+            dir.path().join("test.html"),
+            "<html><body><h1>Test HTML</h1><p>Content here.</p></body></html>"
+        ).unwrap();
+        
+        let folder = dir.path().to_str().unwrap();
+        let pages = list_pages(folder).unwrap();
+        assert_eq!(pages.len(), 2);
+        let paths: Vec<&str> = pages.iter().map(|p| p.path.as_str()).collect();
+        assert!(paths.contains(&"a.md"));
+        assert!(paths.contains(&"test.html"));
+    }
+
+    #[test]
+    fn read_pdf_extracts_text() {
+        let dir = folder();
+        let pdf_content = b"%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj
+4 0 obj<</Length 55>>stream
+BT /F1 12 Tf 50 700 Td (Sample PDF Document) Tj ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000052 00000 n 
+0000000101 00000 n 
+0000000184 00000 n 
+trailer<</Size 5/Root 1 0 R>>
+startxref
+288
+%%EOF";
+        fs::write(dir.path().join("sample.pdf"), pdf_content).unwrap();
+        
+        let folder = dir.path().to_str().unwrap();
+        let page = read_page(folder, "sample.pdf").unwrap();
+        assert_eq!(page.path, "sample.pdf");
+        assert!(page.raw.contains("Sample PDF Document") || page.raw.contains("PDF"));
+    }
+
+    #[test]
+    fn read_html_extracts_text() {
+        let dir = folder();
+        fs::write(
+            dir.path().join("sample.html"),
+            "<html><head><title>Test</title></head><body><h1>Welcome</h1><p>This is a test.</p></body></html>"
+        ).unwrap();
+        
+        let folder = dir.path().to_str().unwrap();
+        let page = read_page(folder, "sample.html").unwrap();
+        assert_eq!(page.path, "sample.html");
+        assert!(page.raw.contains("Welcome"));
+        assert!(page.raw.contains("test"));
+    }
+
+    #[test]
+    fn write_page_rejects_pdf() {
+        let dir = folder();
+        fs::write(dir.path().join("test.pdf"), b"fake pdf").unwrap();
+        
+        let folder = dir.path().to_str().unwrap();
+        let result = write_page(folder, "test.pdf", "new content");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("read-only"));
+    }
+
+    #[test]
+    fn write_page_rejects_html() {
+        let dir = folder();
+        fs::write(dir.path().join("test.html"), "<html></html>").unwrap();
+        
+        let folder = dir.path().to_str().unwrap();
+        let result = write_page(folder, "test.html", "new content");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("read-only"));
+    }
+
+    #[test]
+    fn path_kind_recognizes_pdf() {
+        let dir = folder();
+        fs::write(dir.path().join("test.pdf"), b"fake").unwrap();
+        assert_eq!(path_kind(dir.path().join("test.pdf").to_str().unwrap()), "file");
+    }
+
+    #[test]
+    fn path_kind_recognizes_html() {
+        let dir = folder();
+        fs::write(dir.path().join("test.html"), "html").unwrap();
+        assert_eq!(path_kind(dir.path().join("test.html").to_str().unwrap()), "file");
+        
+        fs::write(dir.path().join("test.htm"), "htm").unwrap();
+        assert_eq!(path_kind(dir.path().join("test.htm").to_str().unwrap()), "file");
     }
 }
