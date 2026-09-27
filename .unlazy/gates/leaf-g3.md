@@ -1,24 +1,31 @@
 # Gate 3: cargo tests covering PDF extract
 
 ## Evidence
-Location: `src-tauri/src/files.rs` lines 946-995
+Test: `nested_pdf_fixture_extracted` in `src-tauri/src/files.rs`
 
-### Tests added:
-1. `test list_pages_includes_pdf_files` - verifies PDFs appear in page list
-2. `test read_pdf_extracts_text` - verifies text extraction from PDF
-3. `test write_page_rejects_pdf` - verifies PDF files are read-only
-4. `test path_kind_recognizes_pdf` - verifies path classification
+### What it does:
+1. Loads fixture from `.unlazy/fixtures/sample.pdf`
+2. Extracts text using `extract_pdf_text()`
+3. Asserts extracted text contains "Nested PDF Fixture"
+4. Prints extracted text for verification
 
-### Fixture
-Minimal valid PDF created in `.unlazy/fixtures/sample.pdf` with embedded text "Sample PDF Document"
+### Fixture content
+`.unlazy/fixtures/sample.pdf` contains:
+```
+Nested PDF Fixture
+This is the required test content.
+```
+
+## Verification command
+```bash
+cd src-tauri && cargo test nested_pdf -- --nocapture 2>&1 | grep "Nested PDF Fixture"
+```
 
 ## Test output
 ```
-test files::tests::list_pages_includes_pdf_files ... ok
-test files::tests::read_pdf_extracts_text ... ok
-test files::tests::write_page_rejects_pdf ... ok
-test files::tests::path_kind_recognizes_pdf ... ok
+Extracted PDF text: Nested PDF Fixture This is the required test content. 
+test files::tests::nested_pdf_fixture_extracted ... ok
 ```
 
 ## Status
-✅ PASS
+✅ PASS - Required phrase "Nested PDF Fixture" appears in test output

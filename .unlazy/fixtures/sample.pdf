@@ -31,15 +31,15 @@ endobj
 endobj
 4 0 obj
 <<
-/Length 84
+/Length 95
 >>
 stream
 BT
 /F1 12 Tf
 50 700 Td
-(Sample PDF Document) Tj
+(Nested PDF Fixture) Tj
 0 -20 Td
-(This PDF contains extractable text.) Tj
+(This is the required test content.) Tj
 ET
 endstream
 endobj
@@ -56,5 +56,5 @@ trailer
 /Root 1 0 R
 >>
 startxref
-451
+462
 %%EOF

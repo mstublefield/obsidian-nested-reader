@@ -1018,6 +1018,42 @@ mod tests {
     }
 
     #[test]
+    fn nested_pdf_fixture_extracted() {
+        // This test uses the fixture at .unlazy/fixtures/sample.pdf
+        let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join(".unlazy/fixtures/sample.pdf");
+        
+        if !fixture_path.exists() {
+            panic!("Fixture not found: {:?}", fixture_path);
+        }
+        
+        let text = extract_pdf_text(&fixture_path).unwrap();
+        println!("Extracted PDF text: {}", text);
+        assert!(text.contains("Nested PDF Fixture"), 
+            "Expected 'Nested PDF Fixture' in extracted text, got: {}", text);
+    }
+
+    #[test]
+    fn nested_html_fixture_extracted() {
+        // This test uses the fixture at .unlazy/fixtures/sample.html
+        let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join(".unlazy/fixtures/sample.html");
+        
+        if !fixture_path.exists() {
+            panic!("Fixture not found: {:?}", fixture_path);
+        }
+        
+        let text = extract_html_text(&fixture_path).unwrap();
+        println!("Extracted HTML text: {}", text);
+        assert!(text.contains("Nested HTML Fixture"),
+            "Expected 'Nested HTML Fixture' in extracted text, got: {}", text);
+    }
+
+    #[test]
     fn list_pages_includes_pdf_files() {
         let dir = folder();
         write_md(dir.path(), "a.md", "# Markdown\n");
