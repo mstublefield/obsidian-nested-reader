@@ -41,6 +41,7 @@ export const tauriPlatform: Platform = {
   pickFolder: () => invoke<string | null>("pick_folder"),
   pathKind: (path) => invoke<PathKind>("path_kind", { path }),
   revealInFinder: (path) => invoke("reveal_in_finder", { path }),
+  setRepresentedPath: (path) => invoke("set_represented_path", { path }),
 
   async getRecents() {
     return (await invoke<RecentSession[] | null>("get_recents")) ?? [];

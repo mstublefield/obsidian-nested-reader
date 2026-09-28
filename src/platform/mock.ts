@@ -143,6 +143,8 @@ export const mockPlatform: Platform = {
     throw new Error("Reveal in Finder works in the desktop app.");
   },
 
+  async setRepresentedPath() {},
+
   async getRecents() {
     return recents;
   },
