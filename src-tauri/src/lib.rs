@@ -9,6 +9,7 @@ mod files;
 mod migrate;
 #[cfg(target_os = "macos")]
 mod open_panel;
+mod pdf_extractor;
 mod tools;
 mod updater;
 
