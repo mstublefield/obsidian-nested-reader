@@ -1778,19 +1778,27 @@ button {
   /* Fixed, not max: a width that changes with the phase's content (e.g. the offer's two buttons vs.
      the download's plain text) would shift the whole centered card sideways when it's recomputed. */
   width: min(460px, 90%);
-  padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid var(--hair);
   background: var(--bg);
   color: var(--fg);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  font-size: 12.5px;
+  line-height: 1.45;
+  animation: rise-centered 0.15s ease-out;
+  /* When the bar holds buttons (.acts), it's a flex row. When it holds a meter, it's a positioned container. */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  font-size: 12.5px;
-  line-height: 1.45;
-  animation: rise-centered 0.15s ease-out;
+  padding: 10px 14px;
+}
+/* Downloading and installing phases: text sits in normal flow, meter is always at the bottom. */
+.update-bar.with-meter {
+  display: block;
+  padding: 10px 14px 12px;
+  /* Reserve space for the meter at the bottom so text doesn't reflow when progress arrives. */
+  min-height: 48px;
 }
 .update-bar .what {
   color: var(--mute);
@@ -1830,7 +1838,8 @@ button {
   opacity: 0.6;
   cursor: default;
 }
-/* The download's share of the card's bottom edge. */
+/* The download's share of the card's bottom edge. Always positioned absolutely at the bottom,
+   never participating in flex or block layout, so it cannot flash mid-card. */
 .update-bar .meter {
   position: absolute;
   left: 10px;
