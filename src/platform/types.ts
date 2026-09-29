@@ -309,6 +309,11 @@ export interface Platform {
   pathKind(path: string): Promise<PathKind>;
   /** Selects the path in the system file manager. */
   revealInFinder(path: string): Promise<void>;
+  /**
+   * macOS only, a no-op elsewhere: points the title bar's proxy icon at `path`, so right-click /
+   * ⌘-click on it shows the native parent-folder menu. `null` clears it (Home, or no folder open).
+   */
+  setRepresentedPath(path: string | null): Promise<void>;
   getRecents(): Promise<RecentSession[]>;
   saveRecents(recents: RecentSession[]): Promise<void>;
   listPages(folder: string): Promise<PageMeta[]>;

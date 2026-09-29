@@ -10,6 +10,8 @@ mod migrate;
 #[cfg(target_os = "macos")]
 mod open_panel;
 mod pdf_extractor;
+#[cfg(target_os = "macos")]
+mod represented_url;
 mod tools;
 mod updater;
 
@@ -102,6 +104,24 @@ fn path_kind(path: String) -> &'static str {
 #[tauri::command]
 fn reveal_in_finder(app: AppHandle, path: String) -> Result<()> {
     app.opener().reveal_item_in_dir(&path).map_err(|e| AppError::Message(e.to_string()))
+}
+
+/// The title bar follows the open session: its native proxy icon (right-click / ⌘-click for a
+/// parent-folder menu) points at `path`, or clears when it's `None`.
+#[tauri::command]
+fn set_represented_path(window: tauri::WebviewWindow, path: Option<String>) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        let target = window.clone();
+        window
+            .run_on_main_thread(move || represented_url::set(&target, path.as_deref()))
+            .map_err(|e| AppError::Message(e.to_string()))?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, path);
+    }
+    Ok(())
 }
 
 /// The reader calls this once it listens for "opened"; it drains what arrived before then.
@@ -568,6 +588,7 @@ pub fn run() {
             pick_path,
             path_kind,
             reveal_in_finder,
+            set_represented_path,
             opened_paths,
             default_markdown_app,
             set_default_markdown_app,

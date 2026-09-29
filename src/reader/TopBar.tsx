@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { platform } from "../platform";
 import { useReader, type ReaderState } from "../state/store";
 import { DragBand } from "./DragBand";
 
@@ -32,6 +33,11 @@ export function topStatus(s: ReaderState): TopStatus | undefined {
 export function TopBar({ children }: { children?: ReactNode }) {
   const s = useReader();
   const status = topStatus(s);
+  // The native proxy icon (right-click / ⌘-click path menu) follows the open folder; Home or no
+  // folder clears it rather than pointing it at a stale path.
+  useEffect(() => {
+    void platform.setRepresentedPath(s.folder ?? null);
+  }, [s.folder]);
   return (
     <div className="topbar">
       <DragBand />
