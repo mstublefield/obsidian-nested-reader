@@ -71,6 +71,30 @@ export function newPagePath(opts: {
 }
 
 /**
+ * The base name a finished page should be renamed to, or null to leave it alone. Skips a page whose
+ * current name is not the one the plugin generated (the user renamed it), a missing heading, and a
+ * name that would not change (ignoring case). `taken` holds the lower-cased base names already in
+ * the folder, not counting this file; a clash gets " 2", " 3" (readable) or "-2", "-3" (slug).
+ */
+export function titleRename(
+	currentBasename: string,
+	generatedBasename: string,
+	h1: string | null,
+	fileNames: FileNames,
+	taken: ReadonlySet<string>,
+): string | null {
+	if (currentBasename !== generatedBasename) return null;
+	if (!h1 || !h1.trim()) return null;
+	const base = baseName(h1, fileNames);
+	if (!base) return null;
+	if (base.toLowerCase() === currentBasename.toLowerCase()) return null;
+	const sep = fileNames === "slug" ? "-" : " ";
+	let name = base;
+	for (let i = 2; taken.has(name.toLowerCase()); i++) name = `${base}${sep}${i}`;
+	return name.toLowerCase() === currentBasename.toLowerCase() ? null : name;
+}
+
+/**
  * The question and title for a new page. A blank question becomes upstream's "Go deeper on: <selection>".
  * The title is the question, capitalised, and is capped so a long selection does not make a long title.
  */

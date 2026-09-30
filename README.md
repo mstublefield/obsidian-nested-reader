@@ -41,6 +41,8 @@ Type a question in the ask box (or in a card's follow-up box), then pick a verb 
 
 New page and Deep dive have no keyboard shortcuts in the box, because Obsidian's own hotkeys already use Cmd+Enter. Esc closes the box.
 
+When a page finishes, its file is renamed to the title the model gave it (links to it update automatically); turn this off with **Rename the file to the page's title** in settings. A page you have renamed yourself is left alone.
+
 Leave the question empty and the page is written to "Go deeper on: <your selection>". The ask box closes when you pick a page verb; a page asked for from a card's follow-up box leaves the card open. The command palette has **New page from selection** and **Deep dive from selection** (empty question, no hotkeys set).
 
 **Where pages go and what they are called** are settings under **New pages**. By default a page goes beside the note it grew from and is named after the question, for example `What is a sharp-wave ripple.md`; a number is added if the name is taken (`... 2.md`). Other choices: put every page in one folder (default name `Nested`, created when needed), and use short slugs like `what-is-a-sharp-wave-ripple.md`. Characters that are illegal in file names or special in links are dropped, and names are cut to 80 characters.

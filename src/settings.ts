@@ -223,6 +223,11 @@ export class NestedSettingTab extends PluginSettingTab {
 						control: { type: "toggle", key: "pages.linkPhrase" },
 					},
 					{
+						name: "Rename the file to the page's title",
+						desc: "When a page finishes, its file takes the title the model gave it. Links to it update automatically.",
+						control: { type: "toggle", key: "pages.renameToTitle" },
+					},
+					{
 						name: "New page opens",
 						control: { type: "dropdown", key: "pages.newPageOpens", options: OPENS_LABELS },
 					},

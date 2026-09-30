@@ -67,6 +67,8 @@ export type PageSettings = {
 	fileNames: FileNames;
 	/** Rewrite the highlighted words in the parent note as a link to the new page. */
 	linkPhrase: boolean;
+	/** When a page finishes, rename its file to the title the model gave it. */
+	renameToTitle: boolean;
 	newPageOpens: Opens;
 	deepDiveOpens: Opens;
 };
@@ -135,6 +137,7 @@ export const DEFAULT_SETTINGS: NestedSettings = {
 		folder: "Nested",
 		fileNames: "readable",
 		linkPhrase: true,
+		renameToTitle: true,
 		newPageOpens: "split",
 		deepDiveOpens: "background",
 	},

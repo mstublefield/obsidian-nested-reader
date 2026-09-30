@@ -18,7 +18,7 @@ import {
 	withBody,
 } from "./compose";
 import { linkPhraseAt, paragraphWithLink, planPhraseLink, withAlias } from "./link-phrase";
-import { newPagePath, pageIdentity } from "./names";
+import { newPagePath, pageIdentity, baseName, titleRename } from "./names";
 import {
 	deletePage,
 	markDone,
@@ -180,7 +180,7 @@ export class PageGrower {
 			const file = await app.vault.create(path, front + placeholderBody(title));
 			if (opts.linkPhrase && req.selection) await this.linkPhrase(req, file);
 			await this.open(file, req.mode === "deep-dive" ? opts.deepDiveOpens : opts.newPageOpens);
-			await this.generate(file, { parent: req.parent, question, mode: req.mode, selection: req.selection, paragraph: req.paragraph, title });
+			await this.generate(file, { parent: req.parent, question, mode: req.mode, selection: req.selection, paragraph: req.paragraph, title, generatedName: file.basename });
 		} catch (e) {
 			new Notice(`Couldn't write the page: ${errorText(e)}`);
 		}
@@ -203,6 +203,11 @@ export class PageGrower {
 		// The highlighted words are still in the parent as the link's text.
 		const links = app.metadataCache.getFileCache(parent)?.links ?? [];
 		const hit = links.find((l) => app.metadataCache.getFirstLinkpathDest(getLinkpath(l.link), parent.path) === file);
+		// Only a file still named as the plugin named it is renamed again; a name the user chose stays.
+		const { fileNames } = this.plugin.settings.pages;
+		const asked = pageIdentity(String(fm?.question ?? ""), "", file.basename).title;
+		const known = [title, asked].map((t) => baseName(t, fileNames));
+		const generatedName = known.some((n) => n.toLowerCase() === file.basename.toLowerCase()) ? file.basename : "";
 		try {
 			await app.vault.process(file, (raw) => withBody(raw, "", placeholderBody(title)));
 			await this.generate(file, {
@@ -212,6 +217,7 @@ export class PageGrower {
 				selection: hit ? norm(hit.displayText ?? "") : "",
 				paragraph: "",
 				title,
+				generatedName,
 			});
 		} catch (e) {
 			new Notice(`Couldn't write the page: ${errorText(e)}`);
@@ -298,7 +304,7 @@ export class PageGrower {
 
 	private async generate(
 		file: TFile,
-		opts: { parent: TFile; question: string; mode: PageMode; selection: string; paragraph: string; title: string },
+		opts: { parent: TFile; question: string; mode: PageMode; selection: string; paragraph: string; title: string; generatedName: string },
 	): Promise<void> {
 		const { app, settings } = this.plugin;
 		const { title } = opts;
@@ -381,6 +387,7 @@ export class PageGrower {
 			}
 		}
 		const shown = heading ?? title;
+		if (ending.kind === "done" && settings.pages.renameToTitle) await this.renameToHeading(file, opts.generatedName, heading);
 		const visible = this.isVisible(file);
 		if (ending.kind === "error") {
 			this.set(markFailed(this.state, file.path, ending.message));
@@ -389,6 +396,24 @@ export class PageGrower {
 		}
 		this.set(markDone(this.state, file.path, !visible));
 		if (!visible) this.readyNotice(file, opts.mode === "deep-dive" ? "Deep dive ready" : "Page ready", shown);
+	}
+
+	/** Renames the finished page's file to its heading. Links and the plugin's saved state follow through the vault's rename event. */
+	private async renameToHeading(file: TFile, generatedName: string, heading: string | null): Promise<void> {
+		const { app, settings } = this.plugin;
+		const dir = file.parent?.path ?? "";
+		const inDir = (dir === "/" ? "" : dir);
+		const taken = new Set<string>();
+		for (const f of app.vault.getAllLoadedFiles()) {
+			if (f !== file && f.parent === file.parent) taken.add(f.path.replace(/^.*\//, "").replace(/\.md$/i, "").toLowerCase());
+		}
+		const name = titleRename(file.basename, generatedName, heading, settings.pages.fileNames, taken);
+		if (!name) return;
+		try {
+			await app.fileManager.renameFile(file, normalizePath(inDir ? `${inDir}/${name}.${file.extension}` : `${name}.${file.extension}`));
+		} catch {
+			// The page is written; keeping the question's file name is fine.
+		}
 	}
 
 	/** A notice that opens the page when clicked. */

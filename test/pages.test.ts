@@ -11,7 +11,7 @@ import {
 	withBody,
 } from "../src/pages/compose";
 import { canLinkPhrase, linkPhraseAt, paragraphWithLink, planPhraseLink, withAlias } from "../src/pages/link-phrase";
-import { baseName, cleanFolder, newPagePath, pageDir, pageIdentity, readableName, uniquePath } from "../src/pages/names";
+import { baseName, cleanFolder, newPagePath, pageDir, pageIdentity, readableName, titleRename, uniquePath } from "../src/pages/names";
 import {
 	deletePage,
 	emptyPageState,
@@ -309,18 +309,20 @@ describe("page settings", () => {
 			folder: "Nested",
 			fileNames: "readable",
 			linkPhrase: true,
+			renameToTitle: true,
 			newPageOpens: "split",
 			deepDiveOpens: "background",
 		});
 		expect(mergeSettings({}).pages).toEqual(DEFAULT_SETTINGS.pages);
 	});
 	it("keeps good saved values and repairs bad ones", () => {
-		const s = mergeSettings({ pages: { location: "folder", folder: "/Out//Here/", fileNames: "slug", linkPhrase: false, newPageOpens: "tab", deepDiveOpens: "nope" } });
+		const s = mergeSettings({ pages: { location: "folder", folder: "/Out//Here/", fileNames: "slug", linkPhrase: false, renameToTitle: false, newPageOpens: "tab", deepDiveOpens: "nope" } });
 		expect(s.pages).toEqual({
 			location: "folder",
 			folder: "Out/Here",
 			fileNames: "slug",
 			linkPhrase: false,
+			renameToTitle: false,
 			newPageOpens: "tab",
 			deepDiveOpens: "background",
 		});
@@ -336,5 +338,29 @@ describe("markUnread", () => {
 		expect(markUnread(s, "a.md")).toBe(s);
 		const w = markWriting(emptyPageState(), "b.md");
 		expect(markUnread(w, "b.md")).toBe(w);
+	});
+});
+
+describe("titleRename", () => {
+	const none = new Set<string>();
+	it("renames to the sanitized heading", () => {
+		expect(titleRename("Go deeper on x", "Go deeper on x", "Why does TMR depend: on sleep?", "readable", none)).toBe("Why does TMR depend on sleep");
+	});
+	it("uses a slug in slug mode", () => {
+		expect(titleRename("go-deeper-on-x", "go-deeper-on-x", "Why does TMR depend on sleep?", "slug", none)).toBe("why-does-tmr-depend-on-sleep");
+	});
+	it("skips when there is no heading", () => {
+		expect(titleRename("a", "a", null, "readable", none)).toBeNull();
+		expect(titleRename("a", "a", "  ", "readable", none)).toBeNull();
+	});
+	it("skips when the name would not change, ignoring case", () => {
+		expect(titleRename("what is a ripple", "what is a ripple", "What is a ripple", "readable", none)).toBeNull();
+	});
+	it("skips when the user renamed the file", () => {
+		expect(titleRename("My name", "Go deeper on x", "New title", "readable", none)).toBeNull();
+	});
+	it("de-duplicates against other files", () => {
+		expect(titleRename("a", "a", "Title", "readable", new Set(["title", "title 2"]))).toBe("Title 3");
+		expect(titleRename("a", "a", "Title", "slug", new Set(["title"]))).toBe("title-2");
 	});
 });
