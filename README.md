@@ -29,11 +29,34 @@ Three settings under **Answers** decide what the model may draw on, for every se
 - **Let it search this vault** (on by default): the model can list, search and read notes, read-only, while it answers. With an API key the plugin runs these tools itself, using the Omnisearch plugin's index for search when it is installed. With the Claude plan the `claude` tool reads the vault directly (Read, Grep and Glob); with the ChatGPT plan `codex` runs inside the vault folder.
 - **Let it search the web** (off by default): uses the service's own web search, which is slower and may cost more per question. Perplexity's presets (`fast`, `low`, `medium`, `high`) search the web by default, so this setting cannot turn search off there.
 
-**Folders it may not read** lists vault folders, one per line (for example `Clients/Acme`), whose notes are never read or sent. The plugin enforces this for its own tools and for the same-folder and thread context (the note you are reading is the one exception). For the Claude plan it is enforced with permission rules and also stated in the instructions. For the ChatGPT plan it is only stated in the instructions, because Codex's sandbox can read the whole disk, so keep very sensitive notes out of a vault you use with it, or leave vault search off.
+**Folders it may not read** lists vault folders, one per line (for example `Clients/Acme`), whose notes should never be read or sent. How firmly that holds depends on the service; see [Limitations](#limitations) before relying on it for sensitive notes.
 
 **Extra instructions** is added to every question, for example "Answer for a product manager."
 
 Privacy: whatever the model reads from your notes is sent to the service you chose, the same as the highlighted text.
+
+## Limitations
+
+Read this before you point the plugin at a vault with confidential notes.
+
+**Folders it may not read** is enforced differently for each way of connecting:
+
+| Connection | How excluded folders are kept out | Can the model still read them? |
+| --- | --- | --- |
+| API key (any service) | The plugin runs every search, list and read itself and refuses excluded paths. | No. |
+| Claude plan (`claude`) | Claude Code permission rules deny reading those folders; searching and listing honour the same rules. The folders are also named in the instructions. | Not in testing so far. Claude Code documents these rules as best effort for search, so treat this as strong but not absolute. |
+| ChatGPT plan (`codex`) | Only an instruction. Codex's read-only sandbox can read the whole disk. | **Yes, if it ignores the instruction.** |
+
+The same-folder and thread context the plugin sends with each question always skips excluded folders. The one exception is the note you are reading, because you chose to ask about it.
+
+If a vault holds notes that must never leave your Mac, the safe options are an API key, or turning off **Let it search this vault** (and **Pages in the same folder**).
+
+Other limits:
+
+- **Perplexity always searches the web.** Its presets (`fast`, `low`, `medium`, `high`, `xhigh`) include web search, so **Let it search the web** cannot turn it off there.
+- **Whatever the model reads is sent to the service you chose**, the same as the highlighted text. Vault search makes that potentially any note outside the excluded folders.
+- **The `.obsidian` folder is never readable** through the Claude plan, because other plugins keep settings and tokens there.
+- **Desktop only.** The plan connections run command-line tools, and streaming uses Node's networking.
 
 ## Network use
 

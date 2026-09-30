@@ -155,7 +155,7 @@ export class NestedSettingTab extends PluginSettingTab {
 					},
 					{
 						name: "Folders it may not read",
-						desc: "One folder per line, e.g. Clients/Acme. Notes inside are never read or sent.",
+						desc: "One folder per line, e.g. Clients/Acme. See Limitations below for how firmly each service honours this.",
 						visible: () => s().answers.vaultSearch,
 						control: { type: "textarea", key: FOLDERS_KEY, placeholder: "Clients/Acme", rows: 4 },
 					},
@@ -168,6 +168,11 @@ export class NestedSettingTab extends PluginSettingTab {
 						name: "Extra instructions",
 						desc: "Added to every question, e.g. 'Answer for a product manager.'",
 						control: { type: "textarea", key: "answers.extraInstructions", rows: 3 },
+					},
+					{
+						name: "Limitations",
+						desc: limitsDesc(),
+						searchable: false,
 					},
 				],
 			},
@@ -187,6 +192,16 @@ export class NestedSettingTab extends PluginSettingTab {
 			},
 		];
 	}
+}
+
+const LIMITS_URL = "https://github.com/mstublefield/obsidian-nested-reader#limitations";
+
+/** Kept to two short sentences: the settings screen has little room, the README has the detail. */
+function limitsDesc(): DocumentFragment {
+	const frag = createFragment();
+	frag.appendText("With the ChatGPT plan, excluded folders are only a request the model may ignore. Perplexity always searches the web. ");
+	frag.createEl("a", { text: "Read about the limits", href: LIMITS_URL });
+	return frag;
 }
 
 function modelDesc(svc: Service): DocumentFragment {
