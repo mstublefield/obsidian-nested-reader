@@ -135,6 +135,7 @@ pnpm dev      # esbuild watch → main.js
 pnpm test     # vitest
 pnpm build    # typecheck + production bundle
 pnpm lint     # eslint with eslint-plugin-obsidianmd
+pnpm install:vault "/path/to/Vault"   # build, then copy main.js, manifest.json, styles.css into that vault
 ```
 
 The dev vault at `~/Documents/Obsidian/Nested Dev` links this repo in as `.obsidian/plugins/nested-reader`, and the [hot-reload](https://github.com/pjeby/hot-reload) plugin reloads it whenever `main.js` changes.
