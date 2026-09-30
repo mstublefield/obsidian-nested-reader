@@ -31,13 +31,15 @@ The hover popover, the underline, clicking to reopen, and remembering itself can
 
 ## New pages and deep dives
 
-Type a question in the ask box (or in a card's follow-up box), then pick a verb. The hint row under the box lists them, and each one can be clicked:
+Type a question in the ask box (or in a card's follow-up box), then pick a verb from the row of buttons under it:
 
-| Keys | Verb | What happens |
-| --- | --- | --- |
-| **Enter** | Quick answer | A short answer in a card, as above. |
-| **Cmd+Enter** (Ctrl+Enter off a Mac) | New page | Writes a new note that answers the question, links the phrase to it, and opens it beside the current note. |
-| **Cmd+Shift+Enter** | Deep dive | Writes a longer note in the background and marks it unread. |
+| Button | What happens |
+| --- | --- |
+| **Quick answer** (or press Enter) | A short answer in a card, as above. In a follow-up box this button reads **Ask**. |
+| **New page** | Writes a new note that answers the question, links the phrase to it, and opens it beside the current note. |
+| **Deep dive** | Writes a longer note in the background and marks it unread. |
+
+New page and Deep dive have no keyboard shortcuts in the box, because Obsidian's own hotkeys already use Cmd+Enter. Esc closes the box.
 
 Leave the question empty and the page is written to "Go deeper on: <your selection>". The ask box closes when you pick a page verb; a page asked for from a card's follow-up box leaves the card open. The command palette has **New page from selection** and **Deep dive from selection** (empty question, no hotkeys set).
 

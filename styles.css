@@ -209,13 +209,25 @@
 	margin-left: var(--size-4-2);
 }
 
-/* Hint row: each verb is a button too */
-.nr-hint-verb {
-	cursor: pointer;
+/* Verb row: Enter asks; New page and Deep dive are buttons */
+.nr-hint {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--size-2-2);
 }
-.nr-hint-verb:hover {
-	color: var(--text-normal);
-	text-decoration: underline;
+.nr-verb {
+	font-size: var(--font-ui-smaller);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+}
+.nr-verb-key {
+	margin-left: var(--size-2-2);
+	opacity: 0.7;
+}
+.nr-verb-esc {
+	margin-left: auto;
+	color: var(--text-faint);
 }
 
 /* Status bar: writing progress and unread pages */

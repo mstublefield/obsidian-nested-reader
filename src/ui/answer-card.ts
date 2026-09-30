@@ -1,4 +1,4 @@
-import { type App, Component, MarkdownRenderer, Platform, setIcon } from "obsidian";
+import { type App, Component, MarkdownRenderer, setIcon } from "obsidian";
 import type { StreamHandlers, StreamResult } from "../ai/transport";
 import { type AskRecord, commitTurn } from "../ask-record";
 import type { PageMode } from "../pages/compose";
@@ -69,17 +69,17 @@ export class AnswerCard {
 			attr: { placeholder: "Ask something…", spellcheck: "false" },
 		});
 		this.hintEl = this.inputRow.createDiv({ cls: "nr-hint" });
-		this.renderHint("↵ Quick answer");
+		this.renderHint("Quick answer");
 		this.input.addEventListener("keydown", (e) => {
 			if (e.key === "Escape") {
 				e.preventDefault();
 				e.stopPropagation();
 				this.requestClose();
-			} else if (e.key === "Enter" && !e.isComposing) {
+			} else if (e.key === "Enter" && !e.isComposing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+				// Only plain Enter: Obsidian's own hotkeys claim the modified Enters, so the page verbs are buttons.
 				e.preventDefault();
 				e.stopPropagation();
-				if (e.metaKey || e.ctrlKey) this.page(e.shiftKey ? "deep-dive" : "new-page");
-				else void this.ask(this.input.value.trim());
+				void this.ask(this.input.value.trim());
 			}
 		});
 		// Esc also closes while an answer is streaming and the input is hidden.
@@ -93,23 +93,22 @@ export class AnswerCard {
 		if (deps.record.thread.length) void this.showSaved();
 	}
 
-	/** The hint row: each verb is also a button, so the keys are not the only way. */
+	/** The verb row under the input: Enter asks; New page and Deep dive are buttons (no key shortcuts). */
 	private renderHint(first: string): void {
-		const mod = Platform.isMacOS ? "⌘" : "Ctrl+";
 		this.hintEl.empty();
-		const verbs: [string, () => void][] = [
-			[first, () => void this.ask(this.input.value.trim())],
-			[`${mod}↵ New page`, () => this.page("new-page")],
-			[`${mod}⇧↵ Deep dive`, () => this.page("deep-dive")],
+		const verbs: [string, string, () => void, boolean][] = [
+			[first, "Enter", () => void this.ask(this.input.value.trim()), true],
+			["New page", "", () => this.page("new-page"), false],
+			["Deep dive", "", () => this.page("deep-dive"), false],
 		];
-		for (const [label, run] of verbs) {
-			const el = this.hintEl.createSpan({ cls: "nr-hint-verb", text: label, attr: { role: "button" } });
-			// Keep focus in the input, so a click on a verb is like pressing its key.
-			el.addEventListener("mousedown", (e) => e.preventDefault());
-			el.addEventListener("click", run);
-			this.hintEl.appendText(" · ");
+		for (const [label, key, run, primary] of verbs) {
+			const btn = this.hintEl.createEl("button", { cls: primary ? "nr-verb mod-cta" : "nr-verb", text: label });
+			if (key) btn.createSpan({ cls: "nr-verb-key", text: "↵" });
+			// Keep focus in the input, so the question typed there is the one the button uses.
+			btn.addEventListener("mousedown", (e) => e.preventDefault());
+			btn.addEventListener("click", run);
 		}
-		this.hintEl.appendText("Esc");
+		this.hintEl.createSpan({ cls: "nr-verb-esc", text: "Esc closes" });
 	}
 
 	private page(mode: PageMode): void {
@@ -128,7 +127,7 @@ export class AnswerCard {
 			return { t, body: turn.createDiv({ cls: "nr-answer markdown-rendered" }) };
 		});
 		this.input.placeholder = "Follow up…";
-		this.renderHint("↵ Ask");
+		this.renderHint("Ask");
 		for (const { t, body } of turns) {
 			if (this.disposed) return;
 			const comp = new Component();
@@ -241,7 +240,7 @@ export class AnswerCard {
 		this.busy = false;
 		this.el.removeClass("is-streaming");
 		this.input.placeholder = "Follow up…";
-		this.renderHint("↵ Ask");
+		this.renderHint("Ask");
 		this.inputRow.removeClass("nr-hidden");
 		this.input.focus({ preventScroll: true });
 	}
