@@ -1,30 +1,18 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
 node_modules
 dist
-dist-ssr
-*.local
 
-# Installers built by hand; the release workflow builds and attaches the real ones
-dist-release/
+# Build output: published as release assets, not committed
+main.js
+*.map
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Obsidian plugin data (settings, sidecar answers) when the repo is symlinked into a vault
+data.json
+answers.json
+
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.idea
+.vscode
 
-# Reader session state written into opened folders
+# Reader session state written into opened folders by the upstream app
 .reader/
+.decisions/

@@ -1,0 +1,13 @@
+/* Nested Reader */
+
+.nr-status {
+	margin: 0 0 var(--size-4-4);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+.nr-status-ok {
+	color: var(--text-success);
+}
+.nr-status-error {
+	color: var(--text-error);
+}

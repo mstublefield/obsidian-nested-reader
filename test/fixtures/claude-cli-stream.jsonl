@@ -1,0 +1,16 @@
+{"type": "system", "subtype": "init"}
+{"type": "system", "subtype": "status"}
+{"type": "stream_event", "event": {"type": "message_start"}}
+{"type": "stream_event", "event": {"type": "content_block_start", "index": 0}}
+{"type": "stream_event", "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": "", "estimated_tokens": null}}}
+{"type": "stream_event", "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "REDACTED"}}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": "", "signature": "REDACTED"}], "stop_reason": null}}
+{"type": "stream_event", "event": {"type": "content_block_stop", "index": 0}}
+{"type": "stream_event", "event": {"type": "content_block_start", "index": 1}}
+{"type": "stream_event", "event": {"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "Ripples carry it"}}}
+{"type": "stream_event", "event": {"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "."}}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Ripples carry it."}], "stop_reason": null}}
+{"type": "stream_event", "event": {"type": "content_block_stop", "index": 1}}
+{"type": "stream_event", "event": {"type": "message_delta", "delta": {"stop_reason": "end_turn", "stop_sequence": null}}}
+{"type": "stream_event", "event": {"type": "message_stop"}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Ripples carry it.", "stop_reason": "end_turn"}
