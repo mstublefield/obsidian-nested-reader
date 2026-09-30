@@ -19,6 +19,14 @@ export type NestedSettings = {
 	answers: AnswerSettings;
 	/** Show the floating Ask pill under a finished text selection. */
 	showAskButton: boolean;
+	/** Keep each finished Quick answer, in the plugin's answers.json, so it can be shown again. */
+	rememberAnswers: boolean;
+	/** Give phrases you have asked about a dotted underline. */
+	underlineAnswers: boolean;
+	/** Show the answer in a small popover when the pointer rests on an underlined phrase. */
+	hoverAnswers: boolean;
+	/** Clicking an underlined phrase reopens its answer as a card, ready for a follow-up. */
+	clickOpensAnswers: boolean;
 };
 
 export type AnswerSettings = {
@@ -94,6 +102,10 @@ export const DEFAULT_SETTINGS: NestedSettings = {
 	context: { highlight: true, session: true, folder: true, map: false },
 	answers: { ownKnowledge: true, vaultSearch: true, excludeFolders: [], webSearch: false, extraInstructions: "" },
 	showAskButton: true,
+	rememberAnswers: true,
+	underlineAnswers: true,
+	hoverAnswers: true,
+	clickOpensAnswers: true,
 };
 
 export function accessFor(settings: NestedSettings, service: Service): Access {

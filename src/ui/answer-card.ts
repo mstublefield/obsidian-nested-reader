@@ -15,6 +15,8 @@ export type CardDeps = {
 	run: AskRunner;
 	/** Called when the user closes the card; the owner removes it and calls `dispose`. */
 	onClose: (card: AnswerCard) => void;
+	/** Called after each turn that finished whole (not cut off, not failed), so the owner can remember it. */
+	onTurn?: (record: AskRecord) => void;
 };
 
 const RENDER_MS = 100;
@@ -78,6 +80,25 @@ export class AnswerCard {
 				this.requestClose();
 			}
 		});
+		// A card reopened from a saved answer starts finished, with its earlier turns shown.
+		if (deps.record.thread.length) void this.showSaved();
+	}
+
+	/** Renders the turns already in the record (a reopened answer) and leaves the card ready for a follow-up. */
+	private async showSaved(): Promise<void> {
+		const turns = this.record.thread.map((t) => {
+			const turn = this.turnsEl.createDiv({ cls: "nr-turn" });
+			turn.createDiv({ cls: "nr-q", text: t.question || "Explain" });
+			return { t, body: turn.createDiv({ cls: "nr-answer markdown-rendered" }) };
+		});
+		this.input.placeholder = "Follow up…";
+		this.hintEl.setText(`↵ ${"Ask"} · Esc`);
+		for (const { t, body } of turns) {
+			if (this.disposed) return;
+			const comp = new Component();
+			this.component.addChild(comp);
+			await MarkdownRenderer.render(this.deps.app, t.answer, body, this.record.filePath, comp);
+		}
 	}
 
 	/** Moves the caret into the input once the card is in the document. */
@@ -158,6 +179,7 @@ export class AnswerCard {
 			if (signal.aborted || this.disposed) return;
 			if (!result.text.trim()) throw new Error("The model returned no answer.");
 			commitTurn(record, result);
+			this.deps.onTurn?.(record);
 			this.thinkingEl?.hide();
 			window.clearTimeout(this.timer);
 			this.timer = 0;

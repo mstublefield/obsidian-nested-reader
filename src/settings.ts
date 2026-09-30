@@ -36,6 +36,7 @@ export class NestedSettingTab extends PluginSettingTab {
 		if (key === FOLDERS_KEY) v = normalizeFolders(value);
 		setPath(this.plugin.settings, key, v);
 		await this.plugin.saveSettings();
+		if (key === "underlineAnswers") this.plugin.refreshAnswers();
 		// Rows appear and disappear with the service, the access mode and the vault-search toggle.
 		if (key === "service" || key.startsWith("access.") || key === "answers.vaultSearch") this.refreshDomState();
 	}
@@ -179,7 +180,24 @@ export class NestedSettingTab extends PluginSettingTab {
 			{
 				type: "group",
 				heading: "Reading",
-				items: [{ name: "Show the ask button when text is selected", control: { type: "toggle", key: "showAskButton" } }],
+				items: [
+					{ name: "Show the ask button when text is selected", control: { type: "toggle", key: "showAskButton" } },
+					{
+						name: "Remember answers",
+						desc: "Keep each finished quick answer in this plugin's answers file, so it can be shown again. Turning this off does not delete answers already kept.",
+						control: { type: "toggle", key: "rememberAnswers" },
+					},
+					{ name: "Underline phrases you have asked about", control: { type: "toggle", key: "underlineAnswers" } },
+					{
+						name: "Show the answer when hovering an underlined phrase",
+						control: { type: "toggle", key: "hoverAnswers" },
+					},
+					{
+						name: "Open the answer when clicking an underlined phrase",
+						desc: "Reopens it as a card under the paragraph, ready for a follow-up. Links inside the phrase still open.",
+						control: { type: "toggle", key: "clickOpensAnswers" },
+					},
+				],
 			},
 			{
 				type: "group",

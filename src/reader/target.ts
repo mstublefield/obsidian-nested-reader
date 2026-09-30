@@ -1,4 +1,5 @@
 import type { Editor, MarkdownView, TFile } from "obsidian";
+import { locatePhrase } from "./locate";
 import { paragraphAround } from "./paragraph";
 import { normalizeSelection } from "./selection";
 
@@ -93,4 +94,34 @@ export function targetFromPreview(view: MarkdownView): PreviewTarget | null {
 	text = normalizeSelection(text);
 	if (!text) return null;
 	return { mode: "preview", file, block, text, paragraph: block.textContent ?? "" };
+}
+
+/** Live Preview and source mode: where a saved phrase is now, as an ask target, or null when it is gone from the note. */
+export function targetForSavedSource(view: MarkdownView, ask: { text: string; paragraph: string }): SourceTarget | null {
+	const file = view.file;
+	if (!file) return null;
+	const editor = view.editor;
+	const doc = editor.getValue();
+	const hit = locatePhrase(doc, ask.text, ask.paragraph);
+	if (!hit) return null;
+	const lines = doc.split("\n");
+	const { from, to } = paragraphAround(lines, editor.offsetToPos(hit.from).line);
+	return {
+		mode: "source",
+		file,
+		editor,
+		text: ask.text,
+		paragraph: lines.slice(from, to + 1).join("\n"),
+		anchor: editor.posToOffset({ line: to, ch: lines[to].length }),
+	};
+}
+
+/** Reading view: the target for an underlined phrase's element, with the card going after its block. */
+export function targetForSavedPreview(view: MarkdownView, el: Element, ask: { text: string }): PreviewTarget | null {
+	const file = view.file;
+	const root = view.contentEl.querySelector<HTMLElement>(".markdown-preview-view");
+	if (!file || !root) return null;
+	const block = blockOf(el, root);
+	if (!block) return null;
+	return { mode: "preview", file, block, text: ask.text, paragraph: block.textContent ?? "" };
 }

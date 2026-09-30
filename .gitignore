@@ -8,6 +8,7 @@ main.js
 # Obsidian plugin data (settings, sidecar answers) when the repo is symlinked into a vault
 data.json
 answers.json
+answers.json.bak
 
 .DS_Store
 .idea

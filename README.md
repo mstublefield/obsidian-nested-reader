@@ -19,7 +19,17 @@ This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True F
 3. Type a question and press **Enter** for a quick answer, or press Enter on an empty box to get an explanation of the selection. **Esc** closes the card.
 4. The answer streams into a card under the paragraph, pushing the text below it down. Type in the box under the answer to ask a follow-up; earlier questions and answers stay above it.
 
-Coming next: dotted underlines and hover recall for past answers, cards that survive a reload, and the New page and Deep dive actions.
+5. After a quick answer finishes, the phrase keeps a **dotted underline**. Hover it to see the answer again in a small popover; move the pointer away to dismiss it. The popover's buttons open the answer as a card, or **Forget** it (a notice offers Undo). The underline appears once the card is closed.
+6. **Click** an underlined phrase to reopen its answer as a card under the paragraph, with the earlier questions above it, ready for a follow-up. A link inside the phrase still opens as a link.
+7. Two commands, with no hotkeys set: **Show answers in this note** (pick one to jump to its phrase and reopen it) and **Forget answers in this note** (with Undo).
+
+Answers are kept after each complete answer, so a crash does not lose them. A cut-off or failed answer is shown but not kept. If you ask again about the same phrase in a note, the new answer replaces the old one. Phrases are found again by their text, so an answer still attaches after you edit around it; if you delete the phrase, the answer stays in the file but has nothing to underline (use **Show answers in this note** to read it).
+
+The hover popover, the underline, clicking to reopen, and remembering itself can each be turned off in settings under Reading.
+
+**Where answers are stored:** in `answers.json` inside this plugin's folder (`.obsidian/plugins/<plugin id>/answers.json`), not inside your notes. They are per vault, follow a renamed or deleted note, and sync only if your vault's `.obsidian` folder syncs. A damaged file is copied to `answers.json.bak` and the plugin starts empty.
+
+Coming next: cards that survive a reload, and the New page and Deep dive actions.
 
 ## Answers
 
