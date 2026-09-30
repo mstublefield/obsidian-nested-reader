@@ -30,23 +30,23 @@ function searchDirs(): string[] {
 	return dirs.filter(Boolean);
 }
 
-/** Returns the path to the claude binary, or null when it can't be found. */
-export function findClaudeBin(override: string): string | null {
+/** Returns the path to a command-line tool, or null when it can't be found. */
+export function findBin(name: string, override: string): string | null {
 	const o = override.trim();
 	if (o && existsSync(o)) return o;
 	for (const dir of searchDirs()) {
-		const p = join(dir, "claude");
+		const p = join(dir, name);
 		if (existsSync(p)) return p;
 	}
 	return null;
 }
 
-function childEnv(): NodeJS.ProcessEnv {
+export function childEnv(): NodeJS.ProcessEnv {
 	// If claude is a node script it needs `node` on PATH, so extend PATH for the child too.
 	return { ...process.env, PATH: [...new Set(searchDirs())].join(delimiter) };
 }
 
-function neutralCwd(): string {
+export function neutralCwd(): string {
 	const dir = join(tmpdir(), "nested-cli");
 	mkdirSync(dir, { recursive: true });
 	return dir;
@@ -56,7 +56,7 @@ export class ClaudeCliTransport implements Transport {
 	constructor(private getBinOverride: () => string) {}
 
 	stream(req: AiRequest, handlers: StreamHandlers, signal?: AbortSignal): Promise<StreamResult> {
-		const bin = findClaudeBin(this.getBinOverride());
+		const bin = findBin("claude", this.getBinOverride());
 		if (!bin) return Promise.reject(new Error(NOT_FOUND));
 		const { system, turns } = splitSystem(req.system, req.messages);
 		const args = [
@@ -131,7 +131,7 @@ export class ClaudeCliTransport implements Transport {
 	}
 
 	test(): Promise<string> {
-		const bin = findClaudeBin(this.getBinOverride());
+		const bin = findBin("claude", this.getBinOverride());
 		if (!bin) return Promise.reject(new Error(NOT_FOUND));
 		return new Promise((resolve, reject) => {
 			const child = spawn(bin, ["auth", "status", "--json"], {

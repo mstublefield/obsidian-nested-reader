@@ -2,7 +2,7 @@
 	"id": "nested-reader",
 	"name": "Nested Reader",
 	"version": "0.1.0",
-	"minAppVersion": "1.11.4",
+	"minAppVersion": "1.13.0",
 	"description": "Select a phrase in a note to ask about it: get a short answer inline, or grow a linked child note from it.",
 	"author": "Matthew Stublefield",
 	"authorUrl": "https://github.com/mstublefield",

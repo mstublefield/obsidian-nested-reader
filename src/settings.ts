@@ -1,145 +1,163 @@
-import { type App, PluginSettingTab, SecretComponent, Setting } from "obsidian";
-import { findClaudeBin } from "./ai/claude-cli";
+import {
+	type App,
+	PluginSettingTab,
+	SecretComponent,
+	type SettingDefinitionItem,
+	type SettingGroupItem,
+} from "obsidian";
+import { findBin } from "./ai/claude-cli";
 import type NestedReaderPlugin from "./main";
-
-export type TransportKind = "cli" | "api";
-export type ModelSlots = { quick: string; pages: string };
-export type NestedSettings = {
-	transport: TransportKind;
-	/** "" = auto-detect. */
-	cliPath: string;
-	/** Name of the secret in app.secretStorage; the key itself is never in data.json. */
-	apiKeySecret: string;
-	models: { cli: ModelSlots; api: ModelSlots };
-	maxTokens: { quick: number; pages: number };
-	context: { highlight: boolean; session: boolean; folder: boolean; map: boolean };
-};
-
-export const DEFAULT_SETTINGS: NestedSettings = {
-	transport: "cli",
-	cliPath: "",
-	apiKeySecret: "anthropic-api-key",
-	models: {
-		cli: { quick: "haiku", pages: "sonnet" },
-		api: { quick: "claude-haiku-4-5-20251001", pages: "claude-sonnet-5-5" },
-	},
-	maxTokens: { quick: 1024, pages: 4096 },
-	context: { highlight: true, session: true, folder: true, map: false },
-};
-
-/** Merges saved data over defaults, one level of nesting at a time, so new keys get defaults. */
-export function mergeSettings(saved: unknown): NestedSettings {
-	const merge = (base: unknown, over: unknown): unknown => {
-		if (!isPlain(base)) return over === undefined || typeof over !== typeof base ? base : over;
-		const o = isPlain(over) ? over : {};
-		return Object.fromEntries(Object.keys(base).map((k) => [k, merge(base[k], o[k])]));
-	};
-	return merge(DEFAULT_SETTINGS, saved) as NestedSettings;
-}
-
-function isPlain(v: unknown): v is Record<string, unknown> {
-	return !!v && typeof v === "object" && !Array.isArray(v);
-}
+import {
+	accessFor,
+	getPath,
+	SERVICE_ORDER,
+	SERVICES,
+	setPath,
+	type Service,
+	type Slot,
+} from "./settings-model";
 
 export class NestedSettingTab extends PluginSettingTab {
 	constructor(app: App, private plugin: NestedReaderPlugin) {
 		super(app, plugin);
 	}
 
-	display(): void {
-		const { containerEl, plugin } = this;
-		const s = plugin.settings;
-		containerEl.empty();
+	getControlValue(key: string): unknown {
+		return getPath(this.plugin.settings, key);
+	}
 
-		new Setting(containerEl).setName("Connection").setHeading();
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		const v = typeof value === "string" && !key.startsWith("apiKeySecret") ? value.trim() : value;
+		setPath(this.plugin.settings, key, v);
+		await this.plugin.saveSettings();
+		// Rows appear and disappear with the service and access mode.
+		if (key === "service" || key.startsWith("access.")) this.refreshDomState();
+	}
 
-		new Setting(containerEl)
-			.setName("Reach Claude through")
-			.addDropdown((d) =>
-				d
-					.addOption("cli", "Claude plan (command-line tool)")
-					.addOption("api", "Anthropic API key")
-					.setValue(s.transport)
-					.onChange(async (v) => {
-						s.transport = v as TransportKind;
-						await plugin.saveSettings();
-						this.display();
-					}),
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		const s = () => this.plugin.settings;
+		const on = (svc: Service) => () => s().service === svc;
+		const onPlan = (svc: "anthropic" | "openai") => () => s().service === svc && accessFor(s(), svc) === "plan";
+		const onApi = (svc: Service) => () => s().service === svc && accessFor(s(), svc) === "api";
+
+		const connection: SettingGroupItem[] = [
+			{
+				name: "Service",
+				control: {
+					type: "dropdown",
+					key: "service",
+					options: Object.fromEntries(SERVICE_ORDER.map((k) => [k, SERVICES[k].label])),
+				},
+			},
+		];
+
+		for (const svc of ["anthropic", "openai"] as const) {
+			connection.push(
+				{
+					name: "Access",
+					visible: on(svc),
+					control: {
+						type: "dropdown",
+						key: `access.${svc}`,
+						options: { plan: SERVICES[svc].planLabel ?? "Plan", api: "API key" },
+					},
+				},
+				{
+					name: "Command-line tool path",
+					desc: "Leave blank to find it automatically.",
+					visible: onPlan(svc),
+					control: {
+						type: "text",
+						key: `cliPath.${svc}`,
+						placeholder: findBin(svc === "anthropic" ? "claude" : "codex", "") ?? "Not found",
+					},
+				},
 			);
-
-		if (s.transport === "cli") {
-			new Setting(containerEl)
-				.setName("Command-line tool path")
-				.setDesc("Leave blank to find the Claude command-line tool automatically.")
-				.addText((t) =>
-					t
-						.setPlaceholder(findClaudeBin("") ?? "Not found")
-						.setValue(s.cliPath)
-						.onChange(async (v) => {
-							s.cliPath = v.trim();
-							await plugin.saveSettings();
-						}),
-				);
-		} else {
-			new Setting(containerEl)
-				.setName("Anthropic API key")
-				.setDesc("Stored in Obsidian's secret storage, not in the plugin's data file.")
-				.addComponent((el) =>
-					new SecretComponent(this.app, el).setValue(s.apiKeySecret).onChange(async (name) => {
-						s.apiKeySecret = name;
-						await plugin.saveSettings();
-					}),
-				);
 		}
 
-		const slots = s.models[s.transport];
-		new Setting(containerEl)
-			.setName("Quick answer model")
-			.addText((t) =>
-				t.setValue(slots.quick).onChange(async (v) => {
-					slots.quick = v.trim();
-					await plugin.saveSettings();
-				}),
-			);
-		new Setting(containerEl)
-			.setName("New page model")
-			.addText((t) =>
-				t.setValue(slots.pages).onChange(async (v) => {
-					slots.pages = v.trim();
-					await plugin.saveSettings();
-				}),
-			);
+		for (const svc of SERVICE_ORDER) {
+			connection.push({
+				name: "API key",
+				desc: "Stored in Obsidian's secret storage, not in this plugin's settings file.",
+				visible: onApi(svc),
+				render: (setting) => {
+					setting.setName("API key");
+					setting.setDesc("Stored in Obsidian's secret storage, not in this plugin's settings file.");
+					setting.addComponent((el) =>
+						new SecretComponent(this.app, el)
+							.setValue(s().apiKeySecret[svc])
+							.onChange(async (name) => {
+								s().apiKeySecret[svc] = name;
+								await this.plugin.saveSettings();
+							}),
+					);
+				},
+			});
+		}
 
-		const status = containerEl.createDiv({ cls: "nr-status" });
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Test connection")
-				.setCta()
-				.onClick(async () => {
-					status.className = "nr-status";
-					status.setText("Checking…");
-					try {
-						status.setText(await plugin.transport().test());
-						status.addClass("nr-status-ok");
-					} catch (e) {
-						status.setText(e instanceof Error ? e.message : String(e));
-						status.addClass("nr-status-error");
-					}
-				}),
-		);
-		containerEl.appendChild(status); // keep the status line under the button
+		const slots: [Slot, string][] = [["quick", "Quick answer model"], ["pages", "New page model"]];
+		for (const svc of SERVICE_ORDER) {
+			for (const [slot, name] of slots) {
+				connection.push({
+					name,
+					desc: modelDesc(svc),
+					visible: on(svc),
+					control: { type: "text", key: `models.${svc}.${slot}` },
+				});
+			}
+		}
 
-		new Setting(containerEl).setName("Context sent with each question").setHeading();
-		const toggle = (name: string, key: "highlight" | "session" | "folder") =>
-			new Setting(containerEl).setName(name).addToggle((t) =>
-				t.setValue(s.context[key]).onChange(async (v) => {
-					s.context[key] = v;
-					await plugin.saveSettings();
-				}),
-			);
-		toggle("Highlight and its paragraph", "highlight");
-		toggle("Other pages in this thread", "session");
-		toggle("Pages in the same folder", "folder");
+		connection.push({
+			name: "Test connection",
+			render: (setting) => {
+				setting.setName("Test connection");
+				const status = setting.descEl.createDiv({ cls: "nr-status" });
+				setting.addButton((b) =>
+					b
+						.setButtonText("Test connection")
+						.setCta()
+						.onClick(async () => {
+							status.className = "nr-status";
+							status.setText("Checking…");
+							try {
+								status.setText(await this.plugin.transport().test());
+								status.addClass("nr-status-ok");
+							} catch (e) {
+								status.setText(e instanceof Error ? e.message : String(e));
+								status.addClass("nr-status-error");
+							}
+						}),
+				);
+			},
+		});
+
+		return [
+			{ type: "group", heading: "Connection", items: connection },
+			{
+				type: "group",
+				heading: "Context sent with each question",
+				items: [
+					{ name: "Highlight and its paragraph", control: { type: "toggle", key: "context.highlight" } },
+					{ name: "Other pages in this thread", control: { type: "toggle", key: "context.session" } },
+					{ name: "Pages in the same folder", control: { type: "toggle", key: "context.folder" } },
+				],
+			},
+		];
 	}
 }
 
+function modelDesc(svc: Service): DocumentFragment {
+	const info = SERVICES[svc];
+	const frag = createFragment();
+	if (svc === "perplexity") {
+		frag.appendText("A preset (fast, low, medium, high) or a provider/model ID such as ");
+		frag.createEl("code", { text: info.example });
+		frag.appendText(". ");
+	} else {
+		frag.appendText("Exact model ID, e.g. ");
+		frag.createEl("code", { text: info.example });
+		frag.appendText(". ");
+	}
+	frag.createEl("a", { text: `See ${info.label}'s model list`, href: info.docsUrl });
+	return frag;
+}

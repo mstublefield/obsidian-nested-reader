@@ -14,12 +14,14 @@ This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True F
 
 ## Network use
 
-When you ask a question, the highlighted text, its paragraph, and (depending on your context settings) other notes from the vault are sent to Anthropic. They go through one of two routes:
+When you ask a question, the highlighted text, its paragraph, and (depending on your context settings) other notes from the vault are sent to the service you choose in settings: Claude, OpenAI, Grok (xAI) or Perplexity. Claude and OpenAI can be reached two ways:
 
-- **Claude plan (CLI)**: runs the `claude` command-line tool installed on your Mac, so questions count against your Claude subscription.
-- **API key**: calls `api.anthropic.com` directly with your key. The key is stored in Obsidian's secret storage, not in the plugin's settings file.
+- **Plan**: runs the `claude` (Claude plan) or `codex` (ChatGPT plan) command-line tool installed on your Mac, so questions count against your subscription.
+- **API key**: calls the provider's API directly (`api.anthropic.com`, `api.openai.com`, `api.x.ai`, `api.perplexity.ai`). Keys are stored in Obsidian's secret storage, not in the plugin's settings file.
 
-Nothing else is sent anywhere. The plugin has no analytics or telemetry.
+Grok and Perplexity are API key only. You type the exact model ID for each service, and it is sent as written; each model field links to that provider's model list.
+
+Nothing else is sent anywhere. The plugin has no analytics or telemetry. It needs Obsidian 1.13.0 or later.
 
 ## Development
 

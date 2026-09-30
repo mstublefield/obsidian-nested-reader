@@ -1,0 +1,4 @@
+data: {"type":"response.output_text.delta","delta":"Hi"}
+
+data: [DONE]
+

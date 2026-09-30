@@ -1,8 +1,12 @@
 import { Notice, Plugin } from "obsidian";
 import { AnthropicApiTransport } from "./ai/anthropic-api";
 import { ClaudeCliTransport } from "./ai/claude-cli";
+import { CodexCliTransport } from "./ai/codex-cli";
+import { PROVIDERS } from "./ai/providers";
+import { ResponsesApiTransport } from "./ai/responses-api";
 import type { Transport } from "./ai/transport";
-import { mergeSettings, NestedSettingTab, type NestedSettings } from "./settings";
+import { NestedSettingTab } from "./settings";
+import { accessFor, mergeSettings, type NestedSettings, type Slot } from "./settings-model";
 
 export default class NestedReaderPlugin extends Plugin {
 	settings!: NestedSettings;
@@ -26,7 +30,7 @@ export default class NestedReaderPlugin extends Plugin {
 		// Temporary: lets the user check streaming end to end before the reader UI exists.
 		this.addCommand({
 			id: "dev-test-stream",
-			name: "Ask Claude a test question",
+			name: "Ask a test question",
 			callback: async () => {
 				const notice = new Notice("Asking…", 0);
 				let sofar = "";
@@ -34,8 +38,8 @@ export default class NestedReaderPlugin extends Plugin {
 					const { text } = await this.transport().stream(
 						{
 							messages: [{ role: "user", content: "In one sentence, what is a sharp-wave ripple?" }],
-							model: this.settings.models[this.settings.transport].quick,
-							maxTokens: this.settings.maxTokens.quick,
+							model: this.model("quick"),
+							maxTokens: this.maxTokens("quick"),
 						},
 						// Shown as it arrives, so streaming is visible, not just the final answer.
 						{ onDelta: (t) => notice.setMessage((sofar += t)) },
@@ -50,12 +54,29 @@ export default class NestedReaderPlugin extends Plugin {
 		});
 	}
 
-	/** Picks the route to Claude each time, so settings changes apply without a reload. */
+	/** Picks the route to the chosen service each time, so settings changes apply without a reload. */
 	transport(): Transport {
-		if (this.settings.transport === "api") {
-			return new AnthropicApiTransport(() => this.app.secretStorage.getSecret(this.settings.apiKeySecret));
+		const st = this.settings;
+		const svc = st.service;
+		const key = () => this.app.secretStorage.getSecret(st.apiKeySecret[svc]);
+		if (svc === "anthropic") {
+			return accessFor(st, svc) === "plan"
+				? new ClaudeCliTransport(() => st.cliPath.anthropic)
+				: new AnthropicApiTransport(key);
 		}
-		return new ClaudeCliTransport(() => this.settings.cliPath);
+		if (svc === "openai" && accessFor(st, svc) === "plan") {
+			return new CodexCliTransport(() => st.cliPath.openai);
+		}
+		return new ResponsesApiTransport(PROVIDERS[svc], key);
+	}
+
+	/** The exact model ID to send for a slot, for the current service. */
+	model(slot: Slot): string {
+		return this.settings.models[this.settings.service][slot];
+	}
+
+	maxTokens(slot: Slot): number {
+		return this.settings.maxTokens[slot];
 	}
 
 	async loadSettings() {
