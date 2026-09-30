@@ -18,6 +18,7 @@ export default defineConfig(
 		'examples',
 		'test',
 		'vitest.config.ts',
+		'scripts',
 	]),
 	{
 		languageOptions: {

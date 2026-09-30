@@ -46,6 +46,17 @@ export class NestedTreeView extends ItemView {
 	}
 
 	render(): void {
+		try {
+			this.renderInner();
+		} catch (e) {
+			const msg = e instanceof Error ? (e.stack ?? e.message) : String(e);
+			console.error("Nested Reader: couldn't draw the Nested pages panel", msg);
+			this.contentEl.empty();
+			this.contentEl.createDiv({ cls: "nr-tree-empty", text: `Couldn't draw this panel: ${e instanceof Error ? e.message : String(e)}` });
+		}
+	}
+
+	private renderInner(): void {
 		const { app, settings, answers, pages } = this.plugin;
 		const scroller = this.contentEl;
 		const top = scroller.scrollTop;
@@ -117,9 +128,9 @@ export class NestedTreeView extends ItemView {
 		const count = answerCountText(answerCount);
 		if (count) el.createSpan({ cls: "nr-tree-count", text: count });
 
-		el.addEventListener("click", (evt) => void this.open(file, Keymap.isModEvent(evt)));
+		el.addEventListener("click", (evt) => void this.openNote(file, Keymap.isModEvent(evt)));
 		el.addEventListener("keydown", (evt) => {
-			if (evt.key === "Enter") void this.open(file, Keymap.isModEvent(evt));
+			if (evt.key === "Enter") void this.openNote(file, Keymap.isModEvent(evt));
 		});
 		el.addEventListener("contextmenu", (evt) => {
 			evt.preventDefault();
@@ -127,7 +138,8 @@ export class NestedTreeView extends ItemView {
 		});
 	}
 
-	private async open(file: TFile, where: boolean | "tab" | "split" | "window"): Promise<void> {
+	/** Not `open`: that name is View.open(containerEl), which Obsidian calls to attach the view. */
+	private async openNote(file: TFile, where: boolean | "tab" | "split" | "window"): Promise<void> {
 		const leaf = this.app.workspace.getLeaf(where);
 		await leaf.openFile(file);
 		// Opening the note it is already showing raises no file-open event.
@@ -137,7 +149,7 @@ export class NestedTreeView extends ItemView {
 	private menu(file: TFile, row: FamilyRow): Menu {
 		const { workspace, metadataCache } = this.app;
 		const menu = new Menu();
-		menu.addItem((i) => i.setTitle("Open in new tab").setIcon("file-plus").onClick(() => void this.open(file, "tab")));
+		menu.addItem((i) => i.setTitle("Open in new tab").setIcon("file-plus").onClick(() => void this.openNote(file, "tab")));
 		menu.addItem((i) =>
 			i.setTitle("Open to the right").setIcon("separator-vertical").onClick(() => void workspace.getLeaf("split", "vertical").openFile(file)),
 		);

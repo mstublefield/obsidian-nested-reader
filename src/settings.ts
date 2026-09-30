@@ -94,12 +94,14 @@ export class NestedSettingTab extends PluginSettingTab {
 		}
 
 		for (const svc of SERVICE_ORDER) {
+			// Named per service: rows without a control are keyed by name, and four rows called "API key" collide.
+			const keyName = `${SERVICES[svc].label} API key`;
 			connection.push({
-				name: "API key",
+				name: keyName,
 				desc: "Stored in Obsidian's secret storage, not in this plugin's settings file.",
 				visible: onApi(svc),
 				render: (setting) => {
-					setting.setName("API key");
+					setting.setName(keyName);
 					setting.setDesc("Stored in Obsidian's secret storage, not in this plugin's settings file.");
 					setting.addComponent((el) =>
 						new SecretComponent(this.app, el)

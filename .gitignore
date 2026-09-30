@@ -17,3 +17,4 @@ answers.json.bak
 # Reader session state written into opened folders by the upstream app
 .reader/
 .decisions/
+debug.log
