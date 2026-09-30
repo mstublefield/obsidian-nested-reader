@@ -1,4 +1,4 @@
-import { type Editor, MarkdownView, type MarkdownFileInfo, normalizePath, Notice, Plugin } from "obsidian";
+import { debounce, type Debouncer, type Editor, MarkdownView, type MarkdownFileInfo, normalizePath, Notice, Plugin, type TFile, type WorkspaceLeaf } from "obsidian";
 import { AnthropicApiTransport } from "./ai/anthropic-api";
 import { ClaudeCliTransport } from "./ai/claude-cli";
 import { CodexCliTransport } from "./ai/codex-cli";
@@ -26,6 +26,8 @@ import { CardManager } from "./ui/card-manager";
 import { cardExtension, cmView } from "./ui/card-host";
 import { AnswerPeek } from "./ui/peek";
 import { noticeWithUndo } from "./ui/undo-notice";
+import { SourceTracker } from "./tree/tracker";
+import { NestedTreeView, TREE_VIEW_TYPE } from "./views/tree-view";
 import { NestedSettingTab } from "./settings";
 import { accessFor, mergeSettings, type NestedSettings, type Slot } from "./settings-model";
 
@@ -37,6 +39,10 @@ export default class NestedReaderPlugin extends Plugin {
 	private loadedPageState: PageState = emptyPageState();
 	private pill!: AskPill;
 	private peek!: AnswerPeek;
+	tracker!: SourceTracker;
+	private active: TFile | null = null;
+	private ribbonEl: HTMLElement | null = null;
+	private refreshTreeSoon!: Debouncer<[], void>;
 
 	async onload() {
 		await this.loadSettings();
@@ -71,6 +77,7 @@ export default class NestedReaderPlugin extends Plugin {
 		this.pages.mountStatus();
 		this.register(() => this.pages.unload());
 		this.app.workspace.onLayoutReady(() => this.pages.prune());
+		this.setupTree();
 		this.cards = new CardManager(this);
 		this.pill = new AskPill({
 			enabled: () => this.settings.showAskButton,
@@ -215,6 +222,101 @@ export default class NestedReaderPlugin extends Plugin {
 				);
 			}),
 		);
+	}
+
+	/** The Nested pages panel: the view, its index of `source` links, the events that keep it current, and ways to open it. */
+	private setupTree(): void {
+		const { app } = this;
+		this.tracker = new SourceTracker(app);
+		this.registerView(TREE_VIEW_TYPE, (leaf) => new NestedTreeView(leaf, this));
+		this.refreshTreeSoon = debounce(() => this.renderTree(), 150, true);
+		const refresh = () => this.refreshTree();
+
+		this.addCommand({ id: "show-nested-pages", name: "Show nested pages", callback: () => void this.showTree() });
+		this.ribbonEl = this.addRibbonIcon("git-fork", "Show nested pages", () => void this.showTree());
+		this.applyRibbon();
+
+		const syncActive = () => {
+			const leaf = app.workspace.getMostRecentLeaf();
+			// The panel itself, or any other non-note view, leaves the last note in place.
+			if (leaf?.view instanceof MarkdownView && leaf.view.file) this.active = leaf.view.file;
+			refresh();
+		};
+		this.registerEvent(app.workspace.on("active-leaf-change", syncActive));
+		this.registerEvent(app.workspace.on("file-open", syncActive));
+		this.registerEvent(
+			app.metadataCache.on("changed", (file) => {
+				this.tracker.update(file);
+				refresh();
+			}),
+		);
+		let first = true;
+		this.registerEvent(
+			app.metadataCache.on("resolved", () => {
+				// The cache may not have been complete when the index was built at start.
+				if (first) this.tracker.build();
+				else this.tracker.resolveAll();
+				first = false;
+				refresh();
+			}),
+		);
+		this.registerEvent(app.vault.on("create", refresh));
+		this.registerEvent(
+			app.vault.on("delete", (file) => {
+				this.tracker.deleted(file);
+				refresh();
+			}),
+		);
+		this.registerEvent(
+			app.vault.on("rename", (file, oldPath) => {
+				this.tracker.renamed(file, oldPath);
+				refresh();
+			}),
+		);
+		this.register(this.pages.onChange(refresh));
+		this.register(this.answers.onChange(refresh));
+
+		app.workspace.onLayoutReady(() => {
+			this.tracker.build();
+			const file = app.workspace.getActiveFile();
+			if (file?.extension === "md") this.active = file;
+			refresh();
+			if (this.settings.tree.openOnStartup) void this.showTree(false);
+		});
+	}
+
+	/** The note whose family the panel shows: the last note the reader looked at. */
+	activeNote(): TFile | null {
+		const file = this.active;
+		return file && this.app.vault.getFileByPath(file.path) === file ? file : null;
+	}
+
+	/** Redraws the open Nested pages panels, once for a burst of events. */
+	refreshTree(): void {
+		this.refreshTreeSoon?.();
+	}
+
+	private renderTree(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(TREE_VIEW_TYPE)) {
+			if (leaf.view instanceof NestedTreeView) leaf.view.render();
+		}
+	}
+
+	/** Shows or hides the ribbon icon to match the setting. */
+	applyRibbon(): void {
+		this.ribbonEl?.toggleClass("nr-hidden", !this.settings.tree.ribbonIcon);
+	}
+
+	/** Opens the Nested pages panel in the right sidebar, or (`reveal` false) only makes sure it exists. */
+	async showTree(reveal = true): Promise<void> {
+		const { workspace } = this.app;
+		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(TREE_VIEW_TYPE)[0] ?? null;
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false);
+			if (!leaf) return;
+			await leaf.setViewState({ type: TREE_VIEW_TYPE, active: reveal });
+		}
+		if (reveal) await workspace.revealLeaf(leaf);
 	}
 
 	/** A command that writes a page about the current selection, with no question ("Go deeper on: ..."). */

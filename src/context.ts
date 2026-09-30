@@ -4,7 +4,7 @@ import { parseFrontMatter } from "./lib/frontmatter";
 import type { AskContext, ContextPage } from "./lib/prompts";
 import { sessionPages } from "./lib/tree";
 import type { PageMeta } from "./platform/types";
-import { sourceFromFrontmatter } from "./reader/source-link";
+import { resolveSource } from "./reader/resolve-source";
 import type { NestedSettings } from "./settings-model";
 import { isExcluded } from "./vault-rules";
 
@@ -28,8 +28,7 @@ function metaFor(app: App, file: TFile): PageMeta {
 	const fm: Record<string, unknown> | undefined = cache?.frontmatter;
 	const h1 = cache?.headings?.find((h) => h.level === 1)?.heading;
 	const str = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v.trim() : undefined);
-	const link = sourceFromFrontmatter(fm?.source);
-	const parent = link ? app.metadataCache.getFirstLinkpathDest(link, file.path) : null;
+	const parent = resolveSource(app, file.path, fm?.source);
 	const mode = fm?.mode === "deep-dive" || fm?.mode === "new-page" ? fm.mode : undefined;
 	return {
 		path: file.path,
@@ -52,9 +51,7 @@ async function sessionContext(app: App, file: TFile, excluded: readonly string[]
 	const files = new Map<string, TFile>([[file.path, file]]);
 	for (const f of app.vault.getMarkdownFiles()) {
 		const fm = app.metadataCache.getFileCache(f)?.frontmatter;
-		const link = sourceFromFrontmatter(fm?.source);
-		if (!link) continue;
-		const target = app.metadataCache.getFirstLinkpathDest(link, f.path);
+		const target = resolveSource(app, f.path, fm?.source);
 		if (!target) continue;
 		files.set(f.path, f);
 		files.set(target.path, target);

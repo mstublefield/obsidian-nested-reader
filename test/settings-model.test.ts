@@ -75,3 +75,11 @@ describe("getPath / setPath", () => {
 		expect(getPath(o, "d.e")).toBe("x");
 	});
 });
+
+describe("tree settings", () => {
+	it("has defaults and merges over them", () => {
+		expect(DEFAULT_SETTINGS.tree).toEqual({ ribbonIcon: true, openOnStartup: false, showAnswerCounts: true });
+		const s = mergeSettings({ tree: { openOnStartup: true } });
+		expect(s.tree).toEqual({ ribbonIcon: true, openOnStartup: true, showAnswerCounts: true });
+	});
+});

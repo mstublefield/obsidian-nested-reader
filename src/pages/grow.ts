@@ -4,7 +4,7 @@ import { buildAskContext } from "../context";
 import { newPageMessages } from "../lib/prompts";
 import { nowIso } from "../lib/time";
 import type NestedReaderPlugin from "../main";
-import { sourceFromFrontmatter } from "../reader/source-link";
+import { resolveSource } from "../reader/resolve-source";
 import type { Opens } from "../settings-model";
 import {
 	bodyFromText,
@@ -24,6 +24,7 @@ import {
 	markDone,
 	markFailed,
 	markRead,
+	markUnread,
 	markWriting,
 	type PageState,
 	renamePage,
@@ -53,6 +54,7 @@ export class PageGrower {
 	private runs = new Map<TFile, Run>();
 	private statusEl: HTMLElement | null = null;
 	state: PageState;
+	private listeners = new Set<() => void>();
 
 	constructor(
 		private plugin: NestedReaderPlugin,
@@ -82,6 +84,19 @@ export class PageGrower {
 		this.state = next;
 		this.persist();
 		this.refreshStatus();
+		for (const cb of [...this.listeners]) cb();
+	}
+
+	/** Calls `cb` whenever unread, writing or failed pages change. Returns the unsubscribe function. */
+	onChange(cb: () => void): () => void {
+		this.listeners.add(cb);
+		return () => this.listeners.delete(cb);
+	}
+
+	/** Marks a page read or unread by choice (the Nested pages panel's right-click menu). */
+	setUnread(path: string, unread: boolean): void {
+		const next = unread ? markUnread(this.state, path) : markRead(this.state, path);
+		if (next !== this.state) this.set(next);
 	}
 
 	private refreshStatus(): void {
@@ -179,8 +194,7 @@ export class PageGrower {
 			return;
 		}
 		const fm = app.metadataCache.getFileCache(file)?.frontmatter;
-		const link = sourceFromFrontmatter(fm?.source);
-		const parent = link ? app.metadataCache.getFirstLinkpathDest(link, file.path) : null;
+		const parent = resolveSource(app, file.path, fm?.source);
 		if (!isGrownPage(fm) || !parent) {
 			new Notice("Couldn't find the note this page grew from.");
 			return;

@@ -18,6 +18,7 @@ import {
 	markDone,
 	markFailed,
 	markRead,
+	markUnread,
 	markWriting,
 	type PageState,
 	renamePage,
@@ -325,5 +326,15 @@ describe("page settings", () => {
 		});
 		expect(mergeSettings({ pages: { location: "elsewhere", fileNames: "x" } }).pages.location).toBe("beside");
 		expect(mergeSettings({ pages: { location: "elsewhere", fileNames: "x" } }).pages.fileNames).toBe("readable");
+	});
+});
+
+describe("markUnread", () => {
+	it("adds once and leaves writing pages alone", () => {
+		const s = markUnread(emptyPageState(), "a.md");
+		expect(s.unread).toEqual(["a.md"]);
+		expect(markUnread(s, "a.md")).toBe(s);
+		const w = markWriting(emptyPageState(), "b.md");
+		expect(markUnread(w, "b.md")).toBe(w);
 	});
 });

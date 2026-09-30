@@ -46,6 +46,8 @@ export class NestedSettingTab extends PluginSettingTab {
 		setPath(this.plugin.settings, key, v);
 		await this.plugin.saveSettings();
 		if (key === "underlineAnswers") this.plugin.refreshAnswers();
+		if (key === "tree.ribbonIcon") this.plugin.applyRibbon();
+		if (key === "tree.showAnswerCounts") this.plugin.refreshTree();
 		// Rows appear and disappear with the service, the access mode and the vault-search toggle.
 		if (key === "service" || key.startsWith("access.") || key === "answers.vaultSearch" || key === "pages.location") this.refreshDomState();
 	}
@@ -226,6 +228,27 @@ export class NestedSettingTab extends PluginSettingTab {
 						name: "Deep dive opens",
 						desc: "In the background, the page is marked unread and a notice appears when it is ready.",
 						control: { type: "dropdown", key: "pages.deepDiveOpens", options: OPENS_LABELS },
+					},
+				],
+			},
+			{
+				type: "group",
+				heading: "Nested pages panel",
+				items: [
+					{
+						name: "Show a ribbon icon",
+						desc: "Adds a Show nested pages button to the left ribbon.",
+						control: { type: "toggle", key: "tree.ribbonIcon" },
+					},
+					{
+						name: "Open the panel when the vault opens",
+						desc: "Adds it to the right sidebar without taking focus. Turning this on applies the next time the vault opens.",
+						control: { type: "toggle", key: "tree.openOnStartup" },
+					},
+					{
+						name: "Show answer counts",
+						desc: "Next to each note, how many quick answers are saved in it.",
+						control: { type: "toggle", key: "tree.showAnswerCounts" },
 					},
 				],
 			},

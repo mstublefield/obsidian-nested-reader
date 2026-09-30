@@ -67,6 +67,18 @@ mode: new-page
 
 Coming next: cards that survive a reload.
 
+## Nested pages panel
+
+Run **Show nested pages** (command palette, or the ribbon icon) to open a panel in the right sidebar. It shows the family of the note you are reading: follow each page's `source` up to the first note, then every page grown from it, in the same order as the original app (the first note newest first, pages under a note oldest first), indented by depth. A note with no family shows a short hint and itself as the only row.
+
+Each row shows the page's `title` (or its file name), and a dot: **blue** is unread, **pulsing blue** is being written, **amber** is failed (hover for the reason). The note you are in is highlighted. A muted "2 answers" after the name counts the quick answers saved in that note.
+
+- **Click** a row to open it in the most recent tab; **Cmd/Ctrl-click** opens it in a new tab. Opening marks it read.
+- **Right-click** for Open in new tab, Open to the right, Mark as unread or read, Regenerate this page (for grown pages), and Obsidian's usual file menu.
+- The **filter** button in the panel header shows only unread, writing and failed pages and the pages above them. It is remembered with the panel's layout, not in settings.
+
+Settings under **Nested pages panel**: show a ribbon icon (on), open the panel when the vault opens (off; it is added to the right sidebar without taking focus), and show answer counts (on). No hotkey is set by default.
+
 ## Answers
 
 Three settings under **Answers** decide what the model may draw on, for every service:

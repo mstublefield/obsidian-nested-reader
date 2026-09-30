@@ -19,6 +19,7 @@ export type NestedSettings = {
 	context: { highlight: boolean; session: boolean; folder: boolean; map: boolean };
 	answers: AnswerSettings;
 	pages: PageSettings;
+	tree: TreeSettings;
 	/** Show the floating Ask pill under a finished text selection. */
 	showAskButton: boolean;
 	/** Keep each finished Quick answer, in the plugin's answers.json, so it can be shown again. */
@@ -42,6 +43,15 @@ export type AnswerSettings = {
 	webSearch: boolean;
 	/** Added verbatim to every question's instructions. */
 	extraInstructions: string;
+};
+
+export type TreeSettings = {
+	/** Put a "Show nested pages" icon in the left ribbon. */
+	ribbonIcon: boolean;
+	/** Add the Nested pages panel to the right sidebar when the vault opens, without taking focus. */
+	openOnStartup: boolean;
+	/** Show the number of saved quick answers next to each note in the panel. */
+	showAnswerCounts: boolean;
 };
 
 /** Where a page opens once it exists. */
@@ -128,6 +138,7 @@ export const DEFAULT_SETTINGS: NestedSettings = {
 		newPageOpens: "split",
 		deepDiveOpens: "background",
 	},
+	tree: { ribbonIcon: true, openOnStartup: false, showAnswerCounts: true },
 	showAskButton: true,
 	rememberAnswers: true,
 	underlineAnswers: true,

@@ -240,3 +240,94 @@
 	cursor: pointer;
 	text-decoration: underline;
 }
+
+/* Nested pages panel */
+.nr-tree {
+	padding: var(--size-4-2);
+}
+.nr-tree-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-2);
+}
+.nr-tree-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.nr-tree-actions {
+	display: flex;
+	flex-shrink: 0;
+	gap: var(--size-2-1);
+}
+.nr-tree-btn.is-active {
+	color: var(--interactive-accent);
+	background-color: var(--background-modifier-hover);
+}
+.nr-tree-empty {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin-bottom: var(--size-4-2);
+}
+.nr-tree-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-2-2) var(--size-4-2);
+	padding-left: calc(var(--size-4-2) + var(--nr-depth, 0) * var(--size-4-4));
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+.nr-tree-row:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+.nr-tree-row.is-current {
+	background-color: var(--background-modifier-active-hover);
+	color: var(--text-normal);
+	font-weight: var(--font-medium);
+}
+.nr-tree-dot {
+	flex-shrink: 0;
+	width: var(--size-4-2);
+	height: var(--size-4-2);
+	border-radius: 50%;
+}
+.nr-tree-dot.is-unread {
+	background-color: var(--color-blue);
+}
+.nr-tree-dot.is-writing {
+	background-color: var(--color-blue);
+	animation: nr-tree-pulse 1.2s ease-in-out infinite;
+}
+.nr-tree-dot.is-failed {
+	background-color: var(--color-orange);
+}
+.nr-tree-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.nr-tree-count {
+	flex-shrink: 0;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+@keyframes nr-tree-pulse {
+	50% {
+		opacity: 0.3;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.nr-tree-dot.is-writing {
+		animation: none;
+	}
+}

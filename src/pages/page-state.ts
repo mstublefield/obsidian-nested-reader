@@ -56,6 +56,11 @@ export function markRead(s: PageState, path: string): PageState {
 	return s.unread.includes(path) ? { ...s, unread: without(s.unread, path) } : s;
 }
 
+/** The reader chose to read the page later (or again). Pages still being written are left alone. */
+export function markUnread(s: PageState, path: string): PageState {
+  return s.unread.includes(path) || s.writing.includes(path) ? s : { ...s, unread: [...s.unread, path] };
+}
+
 /** The key `path` becomes when `from` is renamed to `to`: itself, or a file inside a renamed folder. */
 function rebase(path: string, from: string, to: string): string {
 	if (path === from) return to;
