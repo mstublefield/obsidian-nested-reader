@@ -38,6 +38,17 @@ export class CardManager {
 			run: ({ record: r, question, handlers, signal }) =>
 				quickAsk(this.plugin, target, r, question, handlers, signal),
 			onClose: (c) => this.close(c.id),
+			onPage: (mode, question, followUp) => {
+				void this.plugin.pages.grow({
+					parent: target.file,
+					question,
+					selection: target.text,
+					paragraph: target.paragraph,
+					mode,
+				});
+				// A page from the ask box closes it; a follow-up page leaves the card and its answers.
+				if (!followUp) this.close(record.id);
+			},
 			onTurn: (r) => {
 				if (this.plugin.settings.rememberAnswers && shouldRemember(r)) {
 					this.plugin.answers.upsert(path, recordToSaved(r, Date.now()));

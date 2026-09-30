@@ -208,3 +208,23 @@
 .nr-undo {
 	margin-left: var(--size-4-2);
 }
+
+/* Hint row: each verb is a button too */
+.nr-hint-verb {
+	cursor: pointer;
+}
+.nr-hint-verb:hover {
+	color: var(--text-normal);
+	text-decoration: underline;
+}
+
+/* Status bar: writing progress and unread pages */
+.nr-status-item.is-clickable {
+	cursor: pointer;
+}
+
+/* A notice that opens a page */
+.nr-notice-link {
+	cursor: pointer;
+	text-decoration: underline;
+}

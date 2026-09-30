@@ -29,7 +29,41 @@ The hover popover, the underline, clicking to reopen, and remembering itself can
 
 **Where answers are stored:** in `answers.json` inside this plugin's folder (`.obsidian/plugins/<plugin id>/answers.json`), not inside your notes. They are per vault, follow a renamed or deleted note, and sync only if your vault's `.obsidian` folder syncs. A damaged file is copied to `answers.json.bak` and the plugin starts empty.
 
-Coming next: cards that survive a reload, and the New page and Deep dive actions.
+## New pages and deep dives
+
+Type a question in the ask box (or in a card's follow-up box), then pick a verb. The hint row under the box lists them, and each one can be clicked:
+
+| Keys | Verb | What happens |
+| --- | --- | --- |
+| **Enter** | Quick answer | A short answer in a card, as above. |
+| **Cmd+Enter** (Ctrl+Enter off a Mac) | New page | Writes a new note that answers the question, links the phrase to it, and opens it beside the current note. |
+| **Cmd+Shift+Enter** | Deep dive | Writes a longer note in the background and marks it unread. |
+
+Leave the question empty and the page is written to "Go deeper on: <your selection>". The ask box closes when you pick a page verb; a page asked for from a card's follow-up box leaves the card open. The command palette has **New page from selection** and **Deep dive from selection** (empty question, no hotkeys set).
+
+**Where pages go and what they are called** are settings under **New pages**. By default a page goes beside the note it grew from and is named after the question, for example `What is a sharp-wave ripple.md`; a number is added if the name is taken (`... 2.md`). Other choices: put every page in one folder (default name `Nested`, created when needed), and use short slugs like `what-is-a-sharp-wave-ripple.md`. Characters that are illegal in file names or special in links are dropped, and names are cut to 80 characters.
+
+**Front matter.** Each page starts with:
+
+```yaml
+---
+title: "What is a sharp-wave ripple?"
+source: "[[Replay into cortex]]"
+question: "What is a sharp-wave ripple?"
+created: 2026-09-10T09:42:00.000Z
+mode: new-page
+---
+```
+
+`source` is the note it grew from (quoted, so Obsidian reads it as a link rather than a list), `mode` is `new-page` or `deep-dive`, and `title` is updated to the model's own heading when the page finishes. The plugin reads `source` to show pages grown from the same note as context for later questions.
+
+**The phrase link.** With **Link the phrase to the new page** on (the default), the words you highlighted are rewritten in the parent note as a link to the page, using your vault's link format (for example `[[What is a sharp-wave ripple|sharp-wave ripples]]`). This is skipped, with a notice saying why, when the words are not in the note exactly as highlighted, run across lines, contain brackets or formatting (`*`, `_`, backticks, `==`, `|`), or are already inside a link or code. A quick answer saved for the same phrase is kept; the phrase's dotted underline stays on the link text, and clicking it follows the link (hover still shows the quick answer).
+
+**Writing and endings.** The file is created at once with the front matter and a heading, then the text streams in and is saved every fraction of a second. If the page hits its length limit, it keeps what arrived and ends with a warning callout. If it fails, the file keeps its heading and a failure callout with the reason. Run **Regenerate this page** (offered on any page with `question`, `source` and `mode` in its front matter) to write it again from the same question; it replaces the body and keeps the front matter.
+
+**Opening and unread.** Settings choose where a New page and a Deep dive open: beside (split), in a new tab, in this tab, or in the background (defaults: split and background). A page finished while you are not looking at it is marked unread, and a notice "Deep dive ready: <title>" opens it when clicked. While pages are writing, the status bar says "Writing <title>…"; afterwards it shows how many pages are unread, and clicking it (or running **Open next unread page**) opens the oldest. Opening a page marks it read. Unread, writing and failed pages are remembered in the plugin's `data.json`, next to its settings.
+
+Coming next: cards that survive a reload.
 
 ## Answers
 

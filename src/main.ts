@@ -5,6 +5,9 @@ import { CodexCliTransport } from "./ai/codex-cli";
 import { PROVIDERS } from "./ai/providers";
 import { ResponsesApiTransport } from "./ai/responses-api";
 import type { Transport } from "./ai/transport";
+import { isGrownPage, type PageMode } from "./pages/compose";
+import { PageGrower } from "./pages/grow";
+import { emptyPageState, sanitizePageState, type PageState } from "./pages/page-state";
 import { locatePhrase } from "./reader/locate";
 import {
 	previewRange,
@@ -30,6 +33,8 @@ export default class NestedReaderPlugin extends Plugin {
 	settings!: NestedSettings;
 	cards!: CardManager;
 	answers!: AnswersStore;
+	pages!: PageGrower;
+	private loadedPageState: PageState = emptyPageState();
 	private pill!: AskPill;
 	private peek!: AnswerPeek;
 
@@ -62,6 +67,10 @@ export default class NestedReaderPlugin extends Plugin {
 			},
 		});
 
+		this.pages = new PageGrower(this, this.loadedPageState, () => void this.saveSettings());
+		this.pages.mountStatus();
+		this.register(() => this.pages.unload());
+		this.app.workspace.onLayoutReady(() => this.pages.prune());
 		this.cards = new CardManager(this);
 		this.pill = new AskPill({
 			enabled: () => this.settings.showAskButton,
@@ -108,8 +117,42 @@ export default class NestedReaderPlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on("active-leaf-change", sweep));
 		this.registerEvent(this.app.workspace.on("file-open", () => this.refreshAnswers(undefined, false)));
 
-		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => this.answers.rename(oldPath, file.path)));
-		this.registerEvent(this.app.vault.on("delete", (file) => this.answers.deleteNote(file.path)));
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				this.answers.rename(oldPath, file.path);
+				this.pages.renamed(file.path, oldPath);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				this.answers.deleteNote(file.path);
+				this.pages.deleted(file);
+			}),
+		);
+		this.registerEvent(this.app.workspace.on("file-open", (file) => this.pages.opened(file)));
+
+		this.addCommand({
+			id: "regenerate-page",
+			name: "Regenerate this page",
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!file || file.extension !== "md") return false;
+				if (!isGrownPage(this.app.metadataCache.getFileCache(file)?.frontmatter)) return false;
+				if (!checking) void this.pages.regenerate(file);
+				return true;
+			},
+		});
+		this.addCommand({
+			id: "open-unread-page",
+			name: "Open next unread page",
+			checkCallback: (checking) => {
+				if (!this.pages.state.unread.length) return false;
+				if (!checking) void this.pages.openNextUnread();
+				return true;
+			},
+		});
+		this.addPageCommand("new-page-from-selection", "New page from selection", "new-page");
+		this.addPageCommand("deep-dive-from-selection", "Deep dive from selection", "deep-dive");
 
 		this.addCommand({
 			id: "forget-note-answers",
@@ -172,6 +215,25 @@ export default class NestedReaderPlugin extends Plugin {
 				);
 			}),
 		);
+	}
+
+	/** A command that writes a page about the current selection, with no question ("Go deeper on: ..."). */
+	private addPageCommand(id: string, name: string, mode: PageMode): void {
+		this.addCommand({
+			id,
+			name,
+			checkCallback: (checking) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) return false;
+				const preview = view.getMode() === "preview";
+				if (preview ? !previewRange(view) : !view.editor.getSelection().trim()) return false;
+				if (!checking) {
+					const target = preview ? targetFromPreview(view) : targetFromEditor(view, view.editor);
+					if (target) void this.pages.grow({ parent: target.file, question: "", selection: target.text, paragraph: target.paragraph, mode });
+				}
+				return true;
+			},
+		});
 	}
 
 	/** The note view that contains `el`, if any. */
@@ -312,11 +374,14 @@ export default class NestedReaderPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = mergeSettings(await this.loadData());
+		const raw: unknown = await this.loadData();
+		this.settings = mergeSettings(raw);
+		this.loadedPageState = sanitizePageState((raw as { pageState?: unknown } | null)?.pageState);
 	}
 
+	/** Settings and the small page state (unread, writing, failed) share data.json. */
 	async saveSettings() {
-		await this.saveData(this.settings);
+		await this.saveData({ ...this.settings, pageState: this.pages?.state ?? this.loadedPageState });
 	}
 }
 

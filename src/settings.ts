@@ -16,9 +16,17 @@ import {
 	type Service,
 	type Slot,
 } from "./settings-model";
+import { cleanFolder } from "./pages/names";
 import { normalizeFolders } from "./vault-rules";
 
 const FOLDERS_KEY = "answers.excludeFolders";
+
+const OPENS_LABELS: Record<string, string> = {
+	split: "Beside (split)",
+	tab: "In a new tab",
+	current: "In this tab",
+	background: "In the background",
+};
 
 export class NestedSettingTab extends PluginSettingTab {
 	constructor(app: App, private plugin: NestedReaderPlugin) {
@@ -34,11 +42,12 @@ export class NestedSettingTab extends PluginSettingTab {
 	async setControlValue(key: string, value: unknown): Promise<void> {
 		let v = typeof value === "string" && !key.startsWith("apiKeySecret") ? value.trim() : value;
 		if (key === FOLDERS_KEY) v = normalizeFolders(value);
+		if (key === "pages.folder") v = cleanFolder(String(value));
 		setPath(this.plugin.settings, key, v);
 		await this.plugin.saveSettings();
 		if (key === "underlineAnswers") this.plugin.refreshAnswers();
 		// Rows appear and disappear with the service, the access mode and the vault-search toggle.
-		if (key === "service" || key.startsWith("access.") || key === "answers.vaultSearch") this.refreshDomState();
+		if (key === "service" || key.startsWith("access.") || key === "answers.vaultSearch" || key === "pages.location") this.refreshDomState();
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -174,6 +183,49 @@ export class NestedSettingTab extends PluginSettingTab {
 						name: "Limitations",
 						desc: limitsDesc(),
 						searchable: false,
+					},
+				],
+			},
+			{
+				type: "group",
+				heading: "New pages",
+				items: [
+					{
+						name: "Where new pages go",
+						control: {
+							type: "dropdown",
+							key: "pages.location",
+							options: { beside: "Beside the note they grew from", folder: "In a folder" },
+						},
+					},
+					{
+						name: "Folder for new pages",
+						desc: "Vault-relative, e.g. Nested. Created when needed. Leave blank for the vault root.",
+						visible: () => s().pages.location === "folder",
+						control: { type: "text", key: "pages.folder", placeholder: "Nested" },
+					},
+					{
+						name: "File names",
+						desc: "Readable names look like What is a sharp-wave ripple.md; short slugs like what-is-a-sharp-wave-ripple.md. A number is added when the name is taken.",
+						control: {
+							type: "dropdown",
+							key: "pages.fileNames",
+							options: { readable: "From the question, readable", slug: "Short slug" },
+						},
+					},
+					{
+						name: "Link the phrase to the new page",
+						desc: "Rewrites the highlighted words in your note as a link to the page. Skipped, with a notice, when the words can't safely become a link.",
+						control: { type: "toggle", key: "pages.linkPhrase" },
+					},
+					{
+						name: "New page opens",
+						control: { type: "dropdown", key: "pages.newPageOpens", options: OPENS_LABELS },
+					},
+					{
+						name: "Deep dive opens",
+						desc: "In the background, the page is marked unread and a notice appears when it is ready.",
+						control: { type: "dropdown", key: "pages.deepDiveOpens", options: OPENS_LABELS },
 					},
 				],
 			},

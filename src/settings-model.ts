@@ -1,4 +1,5 @@
 // Pure settings model and migration. Must not import "obsidian" so vitest can load it.
+import { cleanFolder, type FileNames, type PageLocation } from "./pages/names";
 import { normalizeFolders } from "./vault-rules";
 
 export type Service = "anthropic" | "openai" | "xai" | "perplexity";
@@ -17,6 +18,7 @@ export type NestedSettings = {
 	maxTokens: Record<Slot, number>;
 	context: { highlight: boolean; session: boolean; folder: boolean; map: boolean };
 	answers: AnswerSettings;
+	pages: PageSettings;
 	/** Show the floating Ask pill under a finished text selection. */
 	showAskButton: boolean;
 	/** Keep each finished Quick answer, in the plugin's answers.json, so it can be shown again. */
@@ -40,6 +42,23 @@ export type AnswerSettings = {
 	webSearch: boolean;
 	/** Added verbatim to every question's instructions. */
 	extraInstructions: string;
+};
+
+/** Where a page opens once it exists. */
+export type Opens = "split" | "tab" | "current" | "background";
+export const OPENS: readonly Opens[] = ["split", "tab", "current", "background"];
+
+export type PageSettings = {
+	/** Beside the note the page grew from, or in one folder. */
+	location: PageLocation;
+	/** Vault-relative folder, used when `location` is "folder". */
+	folder: string;
+	/** Readable names ("What is a ripple.md") or short slugs ("what-is-a-ripple.md"). */
+	fileNames: FileNames;
+	/** Rewrite the highlighted words in the parent note as a link to the new page. */
+	linkPhrase: boolean;
+	newPageOpens: Opens;
+	deepDiveOpens: Opens;
 };
 
 export type ServiceInfo = {
@@ -101,6 +120,14 @@ export const DEFAULT_SETTINGS: NestedSettings = {
 	maxTokens: { quick: 2048, pages: 8192 },
 	context: { highlight: true, session: true, folder: true, map: false },
 	answers: { ownKnowledge: true, vaultSearch: true, excludeFolders: [], webSearch: false, extraInstructions: "" },
+	pages: {
+		location: "beside",
+		folder: "Nested",
+		fileNames: "readable",
+		linkPhrase: true,
+		newPageOpens: "split",
+		deepDiveOpens: "background",
+	},
 	showAskButton: true,
 	rememberAnswers: true,
 	underlineAnswers: true,
@@ -163,6 +190,14 @@ export function mergeSettings(raw: unknown): NestedSettings {
 	};
 	const merged = merge(DEFAULT_SETTINGS, saved) as NestedSettings;
 	merged.answers.excludeFolders = normalizeFolders(merged.answers.excludeFolders);
+	// A value from an older or hand-edited file that is not one of the choices falls back to its default.
+	const d = DEFAULT_SETTINGS.pages;
+	const p = merged.pages;
+	if (p.location !== "beside" && p.location !== "folder") p.location = d.location;
+	if (p.fileNames !== "readable" && p.fileNames !== "slug") p.fileNames = d.fileNames;
+	if (!OPENS.includes(p.newPageOpens)) p.newPageOpens = d.newPageOpens;
+	if (!OPENS.includes(p.deepDiveOpens)) p.deepDiveOpens = d.deepDiveOpens;
+	p.folder = cleanFolder(p.folder);
 	return merged;
 }
 

@@ -1,6 +1,7 @@
-import { type App, Component, MarkdownRenderer, setIcon } from "obsidian";
+import { type App, Component, MarkdownRenderer, Platform, setIcon } from "obsidian";
 import type { StreamHandlers, StreamResult } from "../ai/transport";
 import { type AskRecord, commitTurn } from "../ask-record";
+import type { PageMode } from "../pages/compose";
 
 export type AskRunner = (args: {
 	record: AskRecord;
@@ -17,6 +18,11 @@ export type CardDeps = {
 	onClose: (card: AnswerCard) => void;
 	/** Called after each turn that finished whole (not cut off, not failed), so the owner can remember it. */
 	onTurn?: (record: AskRecord) => void;
+	/**
+	 * Called when the user picks New page or Deep dive. `followUp` is true when the card already holds
+	 * an answer; the card stays open then, and is the owner's to close otherwise.
+	 */
+	onPage?: (mode: PageMode, question: string, followUp: boolean) => void;
 };
 
 const RENDER_MS = 100;
@@ -62,7 +68,8 @@ export class AnswerCard {
 			type: "text",
 			attr: { placeholder: "Ask something…", spellcheck: "false" },
 		});
-		this.hintEl = this.inputRow.createDiv({ cls: "nr-hint", text: "↵ Quick answer · Esc" });
+		this.hintEl = this.inputRow.createDiv({ cls: "nr-hint" });
+		this.renderHint("↵ Quick answer");
 		this.input.addEventListener("keydown", (e) => {
 			if (e.key === "Escape") {
 				e.preventDefault();
@@ -70,7 +77,9 @@ export class AnswerCard {
 				this.requestClose();
 			} else if (e.key === "Enter" && !e.isComposing) {
 				e.preventDefault();
-				void this.ask(this.input.value.trim());
+				e.stopPropagation();
+				if (e.metaKey || e.ctrlKey) this.page(e.shiftKey ? "deep-dive" : "new-page");
+				else void this.ask(this.input.value.trim());
 			}
 		});
 		// Esc also closes while an answer is streaming and the input is hidden.
@@ -84,6 +93,33 @@ export class AnswerCard {
 		if (deps.record.thread.length) void this.showSaved();
 	}
 
+	/** The hint row: each verb is also a button, so the keys are not the only way. */
+	private renderHint(first: string): void {
+		const mod = Platform.isMacOS ? "⌘" : "Ctrl+";
+		this.hintEl.empty();
+		const verbs: [string, () => void][] = [
+			[first, () => void this.ask(this.input.value.trim())],
+			[`${mod}↵ New page`, () => this.page("new-page")],
+			[`${mod}⇧↵ Deep dive`, () => this.page("deep-dive")],
+		];
+		for (const [label, run] of verbs) {
+			const el = this.hintEl.createSpan({ cls: "nr-hint-verb", text: label, attr: { role: "button" } });
+			// Keep focus in the input, so a click on a verb is like pressing its key.
+			el.addEventListener("mousedown", (e) => e.preventDefault());
+			el.addEventListener("click", run);
+			this.hintEl.appendText(" · ");
+		}
+		this.hintEl.appendText("Esc");
+	}
+
+	private page(mode: PageMode): void {
+		if (this.busy) return;
+		const followUp = this.turnsEl.childElementCount > 0;
+		const question = this.input.value.trim();
+		this.input.value = "";
+		this.deps.onPage?.(mode, question, followUp);
+	}
+
 	/** Renders the turns already in the record (a reopened answer) and leaves the card ready for a follow-up. */
 	private async showSaved(): Promise<void> {
 		const turns = this.record.thread.map((t) => {
@@ -92,7 +128,7 @@ export class AnswerCard {
 			return { t, body: turn.createDiv({ cls: "nr-answer markdown-rendered" }) };
 		});
 		this.input.placeholder = "Follow up…";
-		this.hintEl.setText(`↵ ${"Ask"} · Esc`);
+		this.renderHint("↵ Ask");
 		for (const { t, body } of turns) {
 			if (this.disposed) return;
 			const comp = new Component();
@@ -205,7 +241,7 @@ export class AnswerCard {
 		this.busy = false;
 		this.el.removeClass("is-streaming");
 		this.input.placeholder = "Follow up…";
-		this.hintEl.setText(`↵ ${"Ask"} · Esc`);
+		this.renderHint("↵ Ask");
 		this.inputRow.removeClass("nr-hidden");
 		this.input.focus({ preventScroll: true });
 	}
