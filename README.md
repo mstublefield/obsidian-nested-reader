@@ -12,6 +12,15 @@ This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True F
 
 > **Status:** early development. It is desktop only, and it is not in the community plugin directory.
 
+## How to use
+
+1. Select some text in a note, in Live Preview, source mode or Reading view.
+2. Click the **Ask** pill that appears under the selection, or run **Ask about selection** from the command palette or the editor's right-click menu. The pill can be turned off in settings under Reading. No hotkey is set by default; assign your own in Settings, Hotkeys.
+3. Type a question and press **Enter** for a quick answer, or press Enter on an empty box to get an explanation of the selection. **Esc** closes the card.
+4. The answer streams into a card under the paragraph, pushing the text below it down. Type in the box under the answer to ask a follow-up; earlier questions and answers stay above it.
+
+Coming next: dotted underlines and hover recall for past answers, cards that survive a reload, and the New page and Deep dive actions.
+
 ## Network use
 
 When you ask a question, the highlighted text, its paragraph, and (depending on your context settings) other notes from the vault are sent to the service you choose in settings: Claude, OpenAI, Grok (xAI) or Perplexity. Claude and OpenAI can be reached two ways:

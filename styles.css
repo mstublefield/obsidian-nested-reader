@@ -11,3 +11,133 @@
 .nr-status-error {
 	color: var(--text-error);
 }
+
+/* Ask pill: floats under a finished selection */
+.nr-pill {
+	position: fixed;
+	left: var(--nr-x, 0);
+	top: var(--nr-y, 0);
+	z-index: var(--layer-popover);
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	height: auto;
+	padding: var(--size-2-1) var(--size-4-2);
+	border: none;
+	border-radius: var(--radius-l);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: var(--font-ui-small);
+	box-shadow: var(--shadow-s);
+	cursor: pointer;
+}
+.nr-pill:hover {
+	background: var(--interactive-accent-hover);
+}
+.nr-pill-icon {
+	display: inline-flex;
+}
+.nr-pill-icon .svg-icon {
+	width: var(--icon-xs);
+	height: var(--icon-xs);
+}
+
+/* Answer card: sits under the paragraph and pushes the text below it down */
+.nr-card {
+	position: relative;
+	margin: var(--size-4-2) 0;
+	padding: var(--size-4-3) var(--size-4-4);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: var(--font-text-size);
+	line-height: var(--line-height-normal);
+	cursor: auto;
+	user-select: text;
+}
+.nr-card-close {
+	position: absolute;
+	top: var(--size-2-2);
+	right: var(--size-2-2);
+	color: var(--text-faint);
+}
+.nr-card-close:hover {
+	color: var(--text-normal);
+}
+.nr-turn + .nr-turn {
+	margin-top: var(--size-4-3);
+}
+.nr-q {
+	margin-right: var(--size-4-6);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+.nr-answer > :first-child {
+	margin-top: var(--size-2-2);
+}
+.nr-answer > :last-child {
+	margin-bottom: 0;
+}
+/* Earlier turns of the thread recede */
+.nr-turn:not(:last-of-type) .nr-answer {
+	color: var(--text-muted);
+}
+.nr-thinking {
+	margin-top: var(--size-2-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	animation: nr-pulse 1.4s ease-in-out infinite;
+}
+.nr-card.is-streaming .nr-turn:last-of-type .nr-answer > :last-child::after {
+	content: "";
+	display: inline-block;
+	width: 0.5em;
+	height: 0.5em;
+	margin-left: 0.3em;
+	border-radius: 50%;
+	background: var(--text-faint);
+	animation: nr-pulse 1s ease-in-out infinite;
+}
+@keyframes nr-pulse {
+	0%,
+	100% {
+		opacity: 0.4;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+.nr-note {
+	margin-top: var(--size-2-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+.nr-card-error {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--size-2-3);
+}
+.nr-card-error:not(:empty) {
+	margin-top: var(--size-4-2);
+}
+.nr-error-text {
+	color: var(--text-error);
+	font-size: var(--font-ui-small);
+	white-space: pre-wrap;
+}
+.nr-ask-row {
+	margin-top: var(--size-4-2);
+}
+.nr-hidden {
+	display: none;
+}
+.nr-card .nr-input {
+	width: 100%;
+}
+.nr-hint {
+	margin-top: var(--size-2-2);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}

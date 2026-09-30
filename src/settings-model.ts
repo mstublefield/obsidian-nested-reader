@@ -15,6 +15,8 @@ export type NestedSettings = {
 	models: Record<Service, Record<Slot, string>>;
 	maxTokens: Record<Slot, number>;
 	context: { highlight: boolean; session: boolean; folder: boolean; map: boolean };
+	/** Show the floating Ask pill under a finished text selection. */
+	showAskButton: boolean;
 };
 
 export type ServiceInfo = {
@@ -75,6 +77,7 @@ export const DEFAULT_SETTINGS: NestedSettings = {
 	},
 	maxTokens: { quick: 2048, pages: 8192 },
 	context: { highlight: true, session: true, folder: true, map: false },
+	showAskButton: true,
 };
 
 export function accessFor(settings: NestedSettings, service: Service): Access {

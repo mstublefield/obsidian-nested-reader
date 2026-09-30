@@ -135,6 +135,11 @@ export class NestedSettingTab extends PluginSettingTab {
 			{ type: "group", heading: "Connection", items: connection },
 			{
 				type: "group",
+				heading: "Reading",
+				items: [{ name: "Show the ask button when text is selected", control: { type: "toggle", key: "showAskButton" } }],
+			},
+			{
+				type: "group",
 				heading: "Context sent with each question",
 				items: [
 					{ name: "Highlight and its paragraph", control: { type: "toggle", key: "context.highlight" } },

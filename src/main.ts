@@ -1,15 +1,21 @@
-import { Notice, Plugin } from "obsidian";
+import { type Editor, MarkdownView, type MarkdownFileInfo, Notice, Plugin } from "obsidian";
 import { AnthropicApiTransport } from "./ai/anthropic-api";
 import { ClaudeCliTransport } from "./ai/claude-cli";
 import { CodexCliTransport } from "./ai/codex-cli";
 import { PROVIDERS } from "./ai/providers";
 import { ResponsesApiTransport } from "./ai/responses-api";
 import type { Transport } from "./ai/transport";
+import { previewRange, targetFromEditor, targetFromPreview, type AskTarget } from "./reader/target";
+import { AskPill } from "./ui/ask-pill";
+import { CardManager } from "./ui/card-manager";
+import { cardExtension } from "./ui/card-host";
 import { NestedSettingTab } from "./settings";
 import { accessFor, mergeSettings, type NestedSettings, type Slot } from "./settings-model";
 
 export default class NestedReaderPlugin extends Plugin {
 	settings!: NestedSettings;
+	cards!: CardManager;
+	private pill!: AskPill;
 
 	async onload() {
 		await this.loadSettings();
@@ -27,31 +33,77 @@ export default class NestedReaderPlugin extends Plugin {
 			},
 		});
 
-		// Temporary: lets the user check streaming end to end before the reader UI exists.
+		this.cards = new CardManager(this);
+		this.pill = new AskPill({
+			enabled: () => this.settings.showAskButton,
+			capture: (doc) => this.captureSelection(doc),
+			onAsk: (target) => this.cards.ask(target),
+		});
+		this.registerEditorExtension(cardExtension());
+		this.register(() => {
+			this.pill.hide();
+			this.cards.closeAll();
+		});
+
+		// The main window plus any pop-out window, now and later.
+		this.register(this.pill.watch(document));
+		this.registerEvent(this.app.workspace.on("window-open", (_w, win) => this.register(this.pill.watch(win.document))));
+
+		// One command for both modes: an editor callback is never offered in Reading view, so this
+		// checks the active view itself.
 		this.addCommand({
-			id: "dev-test-stream",
-			name: "Ask a test question",
-			callback: async () => {
-				const notice = new Notice("Asking…", 0);
-				let sofar = "";
-				try {
-					const { text } = await this.transport().stream(
-						{
-							messages: [{ role: "user", content: "In one sentence, what is a sharp-wave ripple?" }],
-							model: this.model("quick"),
-							maxTokens: this.maxTokens("quick"),
-						},
-						// Shown as it arrives, so streaming is visible, not just the final answer.
-						{ onDelta: (t) => notice.setMessage((sofar += t)) },
-					);
-					notice.hide();
-					new Notice(text, 8000);
-				} catch (e) {
-					notice.hide();
-					new Notice(errorText(e));
+			id: "ask-about-selection",
+			name: "Ask about selection",
+			checkCallback: (checking) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) return false;
+				if (view.getMode() === "preview") {
+					if (!previewRange(view)) return false;
+					if (!checking) {
+						const target = targetFromPreview(view);
+						if (target) this.cards.ask(target);
+					}
+					return true;
 				}
+				if (!view.editor.getSelection().trim()) return false;
+				if (!checking) this.askFromEditor(view.editor, view);
+				return true;
 			},
 		});
+
+		this.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, editor, info) => {
+				if (!editor.getSelection().trim()) return;
+				menu.addItem((item) =>
+					item
+						.setTitle("Ask about selection")
+						.setIcon("message-circle-question")
+						.onClick(() => this.askFromEditor(editor, info)),
+				);
+			}),
+		);
+	}
+
+	private askFromEditor(editor: Editor, ctx: MarkdownView | MarkdownFileInfo) {
+		const view = ctx instanceof MarkdownView ? ctx : this.app.workspace.getActiveViewOfType(MarkdownView);
+		const target = view && targetFromEditor(view, editor);
+		if (target) this.cards.ask(target);
+	}
+
+	/** The ask target for the current selection in `doc`, when it is inside a note's editor or Reading view. */
+	private captureSelection(doc: Document): { target: AskTarget; raw: string } | null {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view || view.containerEl.ownerDocument !== doc) return null;
+		if (view.getMode() === "preview") {
+			const range = previewRange(view);
+			const target = range && targetFromPreview(view);
+			return range && target ? { target, raw: range.toString() } : null;
+		}
+		const anchor = doc.getSelection()?.anchorNode;
+		const host = anchor instanceof Element ? anchor : anchor?.parentElement;
+		if (!host || !view.contentEl.contains(host) || !host.closest(".cm-content") || host.closest(".nr-card")) return null;
+		const target = targetFromEditor(view, view.editor);
+		return target ? { target, raw: view.editor.getSelection() } : null;
 	}
 
 	/** Picks the route to the chosen service each time, so settings changes apply without a reload. */
