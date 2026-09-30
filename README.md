@@ -8,7 +8,7 @@ Select a phrase in a note and ask about it, without leaving Obsidian.
 
 Child notes record where they came from in front matter (`source`, `question`, `mode`), so your notes grow into a tree you can browse in the side panel, the graph and backlinks.
 
-This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True Frontier. See [NOTICE.md](NOTICE.md) for attribution and license status. The original app is on the `upstream-app` branch.
+This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True Frontier. See [NOTICE.md](NOTICE.md) for attribution. The original app is on the `upstream-app` branch.
 
 > **Status:** early development. It is desktop only, and it is not in the community plugin directory.
 
@@ -141,3 +141,7 @@ pnpm install:vault "/path/to/Vault"   # build, then copy main.js, manifest.json,
 The dev vault at `~/Documents/Obsidian/Nested Dev` links this repo in as `.obsidian/plugins/nested-reader`, and the [hot-reload](https://github.com/pjeby/hot-reload) plugin reloads it whenever `main.js` changes.
 
 `docs/upstream-README.md` and `docs/architecture.md` describe the original app, and remain the reference for its behavior.
+
+## License
+
+[MIT](LICENSE). Built on [Nested Reader](https://github.com/truefrontier/nested-reader) by Kevin Kirchner (True Frontier), also MIT-licensed; the original copyright notice is kept in LICENSE.

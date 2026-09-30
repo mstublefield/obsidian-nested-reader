@@ -4,6 +4,6 @@ This repository is a fork of [truefrontier/nested-reader](https://github.com/tru
 
 The prompt, ranking, session-map, front-matter, slug, tree and text-wrapping helpers in `src/lib/` and the types in `src/platform/types.ts` come from that project, and the reading model (Quick Answer, New Page, Deep Dive) is its design.
 
-**License status:** the upstream repository has no license file as of 2026-09-30, which means its code is not yet licensed for redistribution. This fork does not claim a license over upstream code. It is not published to the Obsidian community directory, and will not be, until the upstream author grants a license and permission.
+**License:** the upstream project was released under the MIT License on 2026-09-30 ([truefrontier/nested-reader#76](https://github.com/truefrontier/nested-reader/pull/76)), and its author welcomed this Obsidian port, including publishing it, with attribution ([#75](https://github.com/truefrontier/nested-reader/issues/75)). This fork is MIT-licensed as well; see [LICENSE](LICENSE), which keeps the original copyright notice alongside the port's.
 
 The original app is preserved unchanged on the `upstream-app` branch.
