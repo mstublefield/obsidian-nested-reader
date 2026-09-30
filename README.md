@@ -21,6 +21,20 @@ This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True F
 
 Coming next: dotted underlines and hover recall for past answers, cards that survive a reload, and the New page and Deep dive actions.
 
+## Answers
+
+Three settings under **Answers** decide what the model may draw on, for every service:
+
+- **Answer from general knowledge** (on by default): the pages are context, not a limit. When they don't explain something you ask about, the model explains it from what it knows instead of saying the text doesn't cover it.
+- **Let it search this vault** (on by default): the model can list, search and read notes, read-only, while it answers. With an API key the plugin runs these tools itself, using the Omnisearch plugin's index for search when it is installed. With the Claude plan the `claude` tool reads the vault directly (Read, Grep and Glob); with the ChatGPT plan `codex` runs inside the vault folder.
+- **Let it search the web** (off by default): uses the service's own web search, which is slower and may cost more per question. Perplexity's presets (`fast`, `low`, `medium`, `high`) search the web by default, so this setting cannot turn search off there.
+
+**Folders it may not read** lists vault folders, one per line (for example `Clients/Acme`), whose notes are never read or sent. The plugin enforces this for its own tools and for the same-folder and thread context (the note you are reading is the one exception). For the Claude plan it is enforced with permission rules and also stated in the instructions. For the ChatGPT plan it is only stated in the instructions, because Codex's sandbox can read the whole disk, so keep very sensitive notes out of a vault you use with it, or leave vault search off.
+
+**Extra instructions** is added to every question, for example "Answer for a product manager."
+
+Privacy: whatever the model reads from your notes is sent to the service you chose, the same as the highlighted text.
+
 ## Network use
 
 When you ask a question, the highlighted text, its paragraph, and (depending on your context settings) other notes from the vault are sent to the service you choose in settings: Claude, OpenAI, Grok (xAI) or Perplexity. Claude and OpenAI can be reached two ways:

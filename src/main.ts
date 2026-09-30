@@ -122,6 +122,12 @@ export default class NestedReaderPlugin extends Plugin {
 		return new ResponsesApiTransport(PROVIDERS[svc], key);
 	}
 
+	/** Whether the chosen service is reached through a command-line tool, which reads the vault by path. */
+	usesCli(): boolean {
+		const { service } = this.settings;
+		return (service === "anthropic" || service === "openai") && accessFor(this.settings, service) === "plan";
+	}
+
 	/** The exact model ID to send for a slot, for the current service. */
 	model(slot: Slot): string {
 		return this.settings.models[this.settings.service][slot];

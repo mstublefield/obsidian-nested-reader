@@ -16,6 +16,9 @@ import {
 	type Service,
 	type Slot,
 } from "./settings-model";
+import { normalizeFolders } from "./vault-rules";
+
+const FOLDERS_KEY = "answers.excludeFolders";
 
 export class NestedSettingTab extends PluginSettingTab {
 	constructor(app: App, private plugin: NestedReaderPlugin) {
@@ -23,15 +26,18 @@ export class NestedSettingTab extends PluginSettingTab {
 	}
 
 	getControlValue(key: string): unknown {
-		return getPath(this.plugin.settings, key);
+		const v = getPath(this.plugin.settings, key);
+		// The folder list is stored as an array and edited as one path per line.
+		return key === FOLDERS_KEY && Array.isArray(v) ? v.join("\n") : v;
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
-		const v = typeof value === "string" && !key.startsWith("apiKeySecret") ? value.trim() : value;
+		let v = typeof value === "string" && !key.startsWith("apiKeySecret") ? value.trim() : value;
+		if (key === FOLDERS_KEY) v = normalizeFolders(value);
 		setPath(this.plugin.settings, key, v);
 		await this.plugin.saveSettings();
-		// Rows appear and disappear with the service and access mode.
-		if (key === "service" || key.startsWith("access.")) this.refreshDomState();
+		// Rows appear and disappear with the service, the access mode and the vault-search toggle.
+		if (key === "service" || key.startsWith("access.") || key === "answers.vaultSearch") this.refreshDomState();
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
@@ -133,6 +139,38 @@ export class NestedSettingTab extends PluginSettingTab {
 
 		return [
 			{ type: "group", heading: "Connection", items: connection },
+			{
+				type: "group",
+				heading: "Answers",
+				items: [
+					{
+						name: "Answer from general knowledge",
+						desc: "When the notes don't explain something, the model explains it from what it knows.",
+						control: { type: "toggle", key: "answers.ownKnowledge" },
+					},
+					{
+						name: "Let it search this vault",
+						desc: "The model can list, search and read notes (read-only) while answering. What it reads is sent to the service you chose.",
+						control: { type: "toggle", key: "answers.vaultSearch" },
+					},
+					{
+						name: "Folders it may not read",
+						desc: "One folder per line, e.g. Clients/Acme. Notes inside are never read or sent.",
+						visible: () => s().answers.vaultSearch,
+						control: { type: "textarea", key: FOLDERS_KEY, placeholder: "Clients/Acme", rows: 4 },
+					},
+					{
+						name: "Let it search the web",
+						desc: "Uses the service's own web search. Slower, and may cost more per question.",
+						control: { type: "toggle", key: "answers.webSearch" },
+					},
+					{
+						name: "Extra instructions",
+						desc: "Added to every question, e.g. 'Answer for a product manager.'",
+						control: { type: "textarea", key: "answers.extraInstructions", rows: 3 },
+					},
+				],
+			},
 			{
 				type: "group",
 				heading: "Reading",

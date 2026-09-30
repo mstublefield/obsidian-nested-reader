@@ -1,4 +1,5 @@
 // Pure settings model and migration. Must not import "obsidian" so vitest can load it.
+import { normalizeFolders } from "./vault-rules";
 
 export type Service = "anthropic" | "openai" | "xai" | "perplexity";
 export type Access = "plan" | "api";
@@ -15,8 +16,22 @@ export type NestedSettings = {
 	models: Record<Service, Record<Slot, string>>;
 	maxTokens: Record<Slot, number>;
 	context: { highlight: boolean; session: boolean; folder: boolean; map: boolean };
+	answers: AnswerSettings;
 	/** Show the floating Ask pill under a finished text selection. */
 	showAskButton: boolean;
+};
+
+export type AnswerSettings = {
+	/** Tell the model the pages are context, not a limit, so it answers from what it knows. */
+	ownKnowledge: boolean;
+	/** Let the model list, search and read notes (read-only) while it answers. */
+	vaultSearch: boolean;
+	/** Vault-relative folder paths the model may never read or be sent. */
+	excludeFolders: string[];
+	/** Turn on the service's own web search. */
+	webSearch: boolean;
+	/** Added verbatim to every question's instructions. */
+	extraInstructions: string;
 };
 
 export type ServiceInfo = {
@@ -77,6 +92,7 @@ export const DEFAULT_SETTINGS: NestedSettings = {
 	},
 	maxTokens: { quick: 2048, pages: 8192 },
 	context: { highlight: true, session: true, folder: true, map: false },
+	answers: { ownKnowledge: true, vaultSearch: true, excludeFolders: [], webSearch: false, extraInstructions: "" },
 	showAskButton: true,
 };
 
@@ -133,7 +149,9 @@ export function mergeSettings(raw: unknown): NestedSettings {
 		const o = isPlain(over) ? over : {};
 		return Object.fromEntries(Object.keys(base).map((k) => [k, merge(base[k], o[k])]));
 	};
-	return merge(DEFAULT_SETTINGS, saved) as NestedSettings;
+	const merged = merge(DEFAULT_SETTINGS, saved) as NestedSettings;
+	merged.answers.excludeFolders = normalizeFolders(merged.answers.excludeFolders);
+	return merged;
 }
 
 export function getPath(obj: unknown, path: string): unknown {

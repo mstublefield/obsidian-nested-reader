@@ -1,5 +1,13 @@
 import { request } from "https";
 
+/** A non-2xx response, with its status kept so callers can tell a rejected request from a dead connection. */
+export class HttpError extends Error {
+	constructor(readonly status: number, message: string) {
+		super(message);
+		this.name = "HttpError";
+	}
+}
+
 /**
  * POSTs JSON and streams the response body as text. Uses Node's https rather
  * than fetch: it needs no CORS opt-in from any provider, and the plugin is
@@ -28,7 +36,7 @@ export function postStream(
 				if (status < 200 || status >= 300) {
 					let text = "";
 					res.on("data", (c: string) => (text += c));
-					res.on("end", () => finish(new Error(httpErrorMessage(status, text, serviceLabel))));
+					res.on("end", () => finish(new HttpError(status, httpErrorMessage(status, text, serviceLabel))));
 					res.on("error", (e) => finish(e));
 					return;
 				}

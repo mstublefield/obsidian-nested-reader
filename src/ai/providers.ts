@@ -10,6 +10,8 @@ export type ResponsesProvider = {
 	reasoning?: { effort: string };
 	/** Perplexity: a model value without "/" is a preset, not a model. */
 	presets?: boolean;
+	/** Perplexity's schema names the function on `function_call_output` items. */
+	outputName?: boolean;
 };
 
 export const PROVIDERS: Record<"openai" | "xai" | "perplexity", ResponsesProvider> = {
@@ -32,5 +34,6 @@ export const PROVIDERS: Record<"openai" | "xai" | "perplexity", ResponsesProvide
 		url: "https://api.perplexity.ai/v1/agent",
 		testUrl: "https://api.perplexity.ai/v1/models",
 		presets: true,
+		outputName: true,
 	},
 };

@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { codexArgs, codexPrompt } from "./cli-args";
 import { childEnv, findBin, neutralCwd } from "./claude-cli";
 import { CodexStreamReducer } from "./codex-stream";
 import { buildTranscript, splitSystem } from "./transcript";
@@ -18,15 +19,11 @@ export class CodexCliTransport implements Transport {
 		const { system, turns } = splitSystem(req.system, req.messages);
 		const transcript = buildTranscript(turns);
 		// `codex exec` has no system-prompt flag, so the instructions lead the prompt.
-		const prompt = system ? `${system}\n\n---\n\n${transcript}` : transcript;
-		const model = req.model.trim();
-		// The trailing "-" makes codex read the prompt from stdin.
-		const args = ["exec", "--json", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only"];
-		if (model) args.push("--model", model);
-		args.push("-");
+		const prompt = codexPrompt(req, system, transcript);
+		const args = codexArgs(req);
 
 		return new Promise<StreamResult>((resolve, reject) => {
-			const child = spawn(bin, args, { cwd: neutralCwd(), env: childEnv(), stdio: ["pipe", "pipe", "pipe"] });
+			const child = spawn(bin, args, { cwd: req.vaultDir ?? neutralCwd(), env: childEnv(), stdio: ["pipe", "pipe", "pipe"] });
 			const reducer = new CodexStreamReducer();
 			let text = "";
 			let overBudget = false;
@@ -55,7 +52,11 @@ export class CodexCliTransport implements Transport {
 					text += t;
 					handlers.onDelta(t);
 				}
-				for (const t of step.tools) handlers.onTool?.(t);
+				if (step.tools.length) {
+					text = "";
+					handlers.onReset?.();
+					for (const t of step.tools) handlers.onTool?.(t);
+				}
 				if (text.length > budget) {
 					overBudget = true;
 					child.kill();

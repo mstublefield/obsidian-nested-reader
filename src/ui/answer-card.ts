@@ -139,7 +139,19 @@ export class AnswerCard {
 						this.scheduleRender();
 					},
 					onTool: (detail) => {
-						if (!record.answer) this.thinkingEl?.setText(detail);
+						// Successive tool lines replace each other until the answer's text starts.
+						if (signal.aborted || record.answer) return;
+						this.thinkingEl?.setText(detail);
+						this.thinkingEl?.show();
+					},
+					onReset: () => {
+						// Text from a turn that went on to call tools was the model thinking aloud.
+						if (signal.aborted) return;
+						record.answer = "";
+						this.seq++; // a render still in flight must not bring the dropped text back
+						this.answerEl?.empty();
+						this.thinkingEl?.setText("Thinking…");
+						this.thinkingEl?.show();
 					},
 				},
 			});

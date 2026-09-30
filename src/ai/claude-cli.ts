@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { homedir, tmpdir } from "os";
 import { delimiter, join } from "path";
+import { claudeArgs } from "./cli-args";
 import { CliStreamReducer, NOT_SIGNED_IN } from "./cli-stream";
 import { buildTranscript, splitSystem } from "./transcript";
 import type { AiRequest, StreamHandlers, StreamResult, Transport } from "./transport";
@@ -59,12 +60,7 @@ export class ClaudeCliTransport implements Transport {
 		const bin = findBin("claude", this.getBinOverride());
 		if (!bin) return Promise.reject(new Error(NOT_FOUND));
 		const { system, turns } = splitSystem(req.system, req.messages);
-		const args = [
-			"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
-			"--no-session-persistence", "--setting-sources", "", "--strict-mcp-config",
-			"--max-turns", "1", "--tools", "", "--model", req.model,
-		];
-		if (system) args.push("--system-prompt", system);
+		const args = claudeArgs(req, system);
 
 		return new Promise<StreamResult>((resolve, reject) => {
 			const child = spawn(bin, args, { cwd: neutralCwd(), env: childEnv(), stdio: ["pipe", "pipe", "pipe"] });
@@ -96,7 +92,12 @@ export class ClaudeCliTransport implements Transport {
 					text += t;
 					handlers.onDelta(t);
 				}
-				for (const t of step.tools) handlers.onTool?.(t);
+				if (step.tools.length) {
+					// Text before a tool call is the model thinking aloud, not the answer.
+					text = "";
+					handlers.onReset?.();
+					for (const t of step.tools) handlers.onTool?.(t);
+				}
 				if (text.length > budget) {
 					overBudget = true;
 					child.kill();

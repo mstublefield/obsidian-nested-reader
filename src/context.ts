@@ -6,6 +6,7 @@ import { sessionPages } from "./lib/tree";
 import type { PageMeta } from "./platform/types";
 import { sourceFromFrontmatter } from "./reader/source-link";
 import type { NestedSettings } from "./settings-model";
+import { isExcluded } from "./vault-rules";
 
 const SESSION_CAP = 12;
 const FOLDER_CAP = 40;
@@ -47,7 +48,7 @@ async function pageFor(app: App, file: TFile, meta: PageMeta): Promise<ContextPa
 }
 
 /** Pages connected to `file` through `source` front matter: its parent chain, children and siblings. */
-async function sessionContext(app: App, file: TFile): Promise<ContextPage[]> {
+async function sessionContext(app: App, file: TFile, excluded: readonly string[]): Promise<ContextPage[]> {
 	const files = new Map<string, TFile>([[file.path, file]]);
 	for (const f of app.vault.getMarkdownFiles()) {
 		const fm = app.metadataCache.getFileCache(f)?.frontmatter;
@@ -58,6 +59,8 @@ async function sessionContext(app: App, file: TFile): Promise<ContextPage[]> {
 		files.set(f.path, f);
 		files.set(target.path, target);
 	}
+	// Excluded notes are never sent; only the note being read is let through.
+	for (const path of [...files.keys()]) if (path !== file.path && isExcluded(path, excluded)) files.delete(path);
 	const metas: Record<string, PageMeta> = {};
 	for (const f of files.values()) metas[f.path] = metaFor(app, f);
 	const related = sessionPages(file.path, metas).slice(0, SESSION_CAP);
@@ -69,9 +72,9 @@ async function sessionContext(app: App, file: TFile): Promise<ContextPage[]> {
 	return Promise.all(pages);
 }
 
-async function folderContext(app: App, file: TFile, skip: Set<string>): Promise<ContextPage[]> {
+async function folderContext(app: App, file: TFile, skip: Set<string>, excluded: readonly string[]): Promise<ContextPage[]> {
 	const siblings = (file.parent?.children ?? []).filter(
-		(c): c is TFile => c instanceof TFile && c.extension === "md" && c.path !== file.path && !skip.has(c.path),
+		(c): c is TFile => c instanceof TFile && c.extension === "md" && c.path !== file.path && !skip.has(c.path) && !isExcluded(c.path, excluded),
 	);
 	return Promise.all(siblings.slice(0, FOLDER_CAP).map((f) => pageFor(app, f, metaFor(app, f))));
 }
@@ -82,10 +85,11 @@ export async function buildAskContext(
 	input: AskContextInput,
 ): Promise<AskContext> {
 	const { file } = input;
+	const excluded = settings.answers.excludeFolders;
 	const page = await pageFor(app, file, metaFor(app, file));
-	const session = settings.context.session ? await sessionContext(app, file) : [];
+	const session = settings.context.session ? await sessionContext(app, file, excluded) : [];
 	const skip = new Set(session.map((p) => p.meta.path));
-	const folder = settings.context.folder ? await folderContext(app, file, skip) : [];
+	const folder = settings.context.folder ? await folderContext(app, file, skip, excluded) : [];
 	return {
 		page,
 		selection: input.selection,
@@ -94,7 +98,7 @@ export async function buildAskContext(
 		folder,
 		mapPages: [],
 		summaries: {},
-		settings: promptSettings(settings.context),
+		settings: promptSettings(settings.context, settings.answers.vaultSearch),
 		thread: input.thread,
 	};
 }

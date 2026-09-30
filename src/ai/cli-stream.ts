@@ -66,6 +66,17 @@ function toolDetail(block: Json): string {
 		const pat = str("pattern");
 		if (pat) return `Searching for “${[...pat].slice(0, 40).join("")}”`;
 	}
+	if (name === "WebSearch") return "Searching the web";
+	if (name === "WebFetch") {
+		const url = str("url");
+		let host = "";
+		try {
+			host = url ? new URL(url).hostname : "";
+		} catch {
+			// not a URL
+		}
+		return host ? `Reading ${host}` : "Reading a web page";
+	}
 	if (name === "Glob" || name === "LS") return "Listing the pages";
 	return `Using ${name}`;
 }
