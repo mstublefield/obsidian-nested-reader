@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-nested-reader",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"private": true,
 	"description": "Nested Reader for Obsidian: ask about a phrase, get an inline answer or a linked child note.",
 	"main": "main.js",

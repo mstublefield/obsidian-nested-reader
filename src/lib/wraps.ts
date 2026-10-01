@@ -47,10 +47,14 @@ export function applyWraps(el: Element, wraps: Wrap[]): void {
       let node = seg.node;
       if (s > seg.start) node = node.splitText(s - seg.start);
       if (e < seg.end) node.splitText(e - s);
-      const span = document.createElement("span");
+      const parent = node.parentNode;
+      if (!parent) continue;
+      // Obsidian port: Obsidian's createSpan (appends, so it is moved into place next), in the text's own
+      // document so pop-out windows work. Upstream: el.ownerDocument.createElement("span").
+      const span = parent.createSpan();
       span.className = w.className;
       if (w.attrs) for (const [k, v] of Object.entries(w.attrs)) span.setAttribute(k, v);
-      node.parentNode?.insertBefore(span, node);
+      parent.insertBefore(span, node);
       span.appendChild(node);
     }
   }
