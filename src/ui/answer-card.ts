@@ -49,6 +49,9 @@ export class AnswerCard {
 	private seq = 0;
 	private disposed = false;
 	private busy = false;
+	/** Off the page but still answering: finish, save, then release (see releaseWhenDone). */
+	private detached = false;
+	private onReleased: (() => void) | null = null;
 
 	constructor(private deps: CardDeps) {
 		this.record = deps.record;
@@ -147,6 +150,31 @@ export class AnswerCard {
 		this.deps.onClose(this);
 	}
 
+	/**
+	 * The card's place on the page is gone (a note switch, an edit across its anchor, a re-render). An answer
+	 * still streaming keeps going without being drawn, is saved by onTurn when it ends, and only then is the
+	 * card released, so leaving a note doesn't throw the answer away. An idle card is released at once.
+	 */
+	releaseWhenDone(onReleased: () => void): void {
+		if (!this.busy) {
+			this.dispose();
+			onReleased();
+			return;
+		}
+		this.detached = true;
+		this.onReleased = onReleased;
+		window.clearTimeout(this.timer);
+		this.timer = 0;
+		this.el.remove();
+	}
+
+	private release(): void {
+		this.dispose();
+		const done = this.onReleased;
+		this.onReleased = null;
+		done?.();
+	}
+
 	/** Aborts any stream and releases everything; the owner has already taken the element out. */
 	dispose(): void {
 		this.disposed = true;
@@ -191,6 +219,7 @@ export class AnswerCard {
 					onDelta: (t) => {
 						if (signal.aborted) return;
 						record.answer += t;
+						if (this.detached) return;
 						this.thinkingEl?.hide();
 						this.scheduleRender();
 					},
@@ -215,6 +244,7 @@ export class AnswerCard {
 			if (!result.text.trim()) throw new Error("The model returned no answer.");
 			commitTurn(record, result);
 			this.deps.onTurn?.(record);
+			if (this.detached) return this.release();
 			this.thinkingEl?.hide();
 			window.clearTimeout(this.timer);
 			this.timer = 0;
@@ -223,6 +253,7 @@ export class AnswerCard {
 			this.finish();
 		} catch (e) {
 			if (signal.aborted || this.disposed) return;
+			if (this.detached) return this.release();
 			record.error = e instanceof Error ? e.message : String(e);
 			this.thinkingEl?.hide();
 			window.clearTimeout(this.timer);
@@ -256,7 +287,7 @@ export class AnswerCard {
 	/** Renders the answer so far. Renders go to a detached element and swap in, so a slow one never shows stale text. */
 	private async renderNow(): Promise<void> {
 		const target = this.answerEl;
-		if (!target || this.disposed) return;
+		if (!target || this.disposed || this.detached) return;
 		const seq = ++this.seq;
 		const tmp = createDiv();
 		const comp = new Component();

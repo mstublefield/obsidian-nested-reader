@@ -24,6 +24,8 @@ const SWEEP_MS = 300;
 export class CardManager {
 	private open = new Map<string, Open>();
 	private sweepTimer = 0;
+	/** Cards whose place on the page is gone but whose answer is still streaming; see AnswerCard.releaseWhenDone. */
+	private background = new Set<AnswerCard>();
 
 	constructor(private plugin: NestedReaderPlugin) {}
 
@@ -112,11 +114,24 @@ export class CardManager {
 
 	closeAll(): void {
 		for (const id of [...this.open.keys()]) this.close(id);
+		for (const card of this.background) card.dispose();
+		this.background.clear();
 	}
 
-	/** Closes cards whose host is gone (a closed editor, a re-rendered Reading view), which aborts their streams. */
+	/** A card that left the page: let a running answer finish and be saved before letting go of it. */
+	private release(id: string): void {
+		const entry = this.open.get(id);
+		if (!entry) return;
+		this.open.delete(id);
+		entry.remove();
+		this.background.add(entry.card);
+		entry.card.releaseWhenDone(() => this.background.delete(entry.card));
+		this.plugin.refreshAnswers([entry.path]);
+	}
+
+	/** Lets go of cards whose host is gone (a closed editor, a note switch, a re-rendered Reading view). */
 	sweep(): void {
-		for (const [id, e] of [...this.open]) if (!e.alive()) this.close(id);
+		for (const [id, e] of [...this.open]) if (!e.alive()) this.release(id);
 	}
 
 	/** `sweep` a moment from now, once a re-render has settled. Repeated calls share one timer. */
