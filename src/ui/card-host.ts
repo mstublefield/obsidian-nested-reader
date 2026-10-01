@@ -1,4 +1,4 @@
-import { type Extension, StateEffect, StateField } from "@codemirror/state";
+import { type EditorState, type Extension, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import type { Editor } from "obsidian";
 import type { AnswerCard } from "./answer-card";
@@ -20,7 +20,8 @@ class CardWidget extends WidgetType {
 	}
 }
 
-const addCard = StateEffect.define<{ pos: number; card: AnswerCard }>();
+export const addCardEffect = StateEffect.define<{ pos: number; card: AnswerCard }>();
+const addCard = addCardEffect;
 const removeCard = StateEffect.define<string>();
 
 /** Block decorations must come from a StateField (not a ViewPlugin). */
@@ -42,9 +43,34 @@ const cardField = StateField.define<DecorationSet>({
 	provide: (f) => EditorView.decorations.from(f),
 });
 
-/** Register once with `plugin.registerEditorExtension`. Each editor view keeps its own cards. */
-export function cardExtension(): Extension {
-	return cardField;
+/** Ids of the cards that are actually in this editor state. */
+export function cardIds(state: EditorState): Set<string> {
+	const ids = new Set<string>();
+	const decos = state.field(cardField, false);
+	decos?.between(0, state.doc.length, (_f, _t, v) => {
+		const id = (v.spec as { widget?: CardWidget }).widget?.card.id;
+		if (id) ids.add(id);
+	});
+	return ids;
+}
+
+/**
+ * Register once with `plugin.registerEditorExtension`. Each editor view keeps its own cards.
+ * `onDropped` hears about a card an edit removed (text around its anchor deleted), so the card
+ * manager can close it instead of holding it, and its running stream, forever.
+ */
+export function cardExtension(onDropped?: () => void): Extension {
+	if (!onDropped) return cardField;
+	return [
+		cardField,
+		EditorView.updateListener.of((u) => {
+			if (!u.docChanged) return;
+			const before = cardIds(u.startState);
+			if (!before.size) return;
+			const after = cardIds(u.state);
+			for (const id of before) if (!after.has(id)) return onDropped();
+		}),
+	];
 }
 
 /**
