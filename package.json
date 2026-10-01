@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-nested-reader",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"description": "Nested Reader for Obsidian: ask about a phrase, get an inline answer or a linked child note.",
 	"main": "main.js",
@@ -33,5 +33,6 @@
 			"esbuild"
 		]
 	},
-	"license": "MIT"
+	"license": "MIT",
+	"packageManager": "pnpm@10.30.3"
 }
