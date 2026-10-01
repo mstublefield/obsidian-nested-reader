@@ -1,7 +1,4 @@
-import { spawn } from "child_process";
-import { existsSync, mkdirSync, readdirSync } from "fs";
-import { homedir, tmpdir } from "os";
-import { delimiter, join } from "path";
+import { delimiter, env, existsSync, homedir, join, mkdirSync, readdirSync, spawn, tmpdir, type Env } from "../node";
 import { claudeArgs } from "./cli-args";
 import { CliStreamReducer, NOT_SIGNED_IN } from "./cli-stream";
 import { buildTranscript, splitSystem } from "./transcript";
@@ -13,7 +10,7 @@ const NOT_FOUND = "The claude command-line tool isn't installed, or wasn't found
 function searchDirs(): string[] {
 	const home = homedir();
 	const dirs = [
-		...(process.env.PATH ?? "").split(delimiter),
+		...(env().PATH ?? "").split(delimiter),
 		join(home, ".local/bin"),
 		join(home, ".claude/local"),
 		join(home, ".volta/bin"),
@@ -42,9 +39,9 @@ export function findBin(name: string, override: string): string | null {
 	return null;
 }
 
-export function childEnv(): NodeJS.ProcessEnv {
+export function childEnv(): Env {
 	// If claude is a node script it needs `node` on PATH, so extend PATH for the child too.
-	return { ...process.env, PATH: [...new Set(searchDirs())].join(delimiter) };
+	return { ...env(), PATH: [...new Set(searchDirs())].join(delimiter) };
 }
 
 export function neutralCwd(): string {

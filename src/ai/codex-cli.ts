@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn } from "../node";
 import { codexArgs, codexPrompt } from "./cli-args";
 import { childEnv, findBin, neutralCwd } from "./claude-cli";
 import { CodexStreamReducer } from "./codex-stream";

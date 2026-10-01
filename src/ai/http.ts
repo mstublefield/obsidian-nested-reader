@@ -1,4 +1,4 @@
-import { request } from "https";
+import { request } from "../node";
 
 /** A non-2xx response, with its status kept so callers can tell a rejected request from a dead connection. */
 export class HttpError extends Error {
@@ -28,7 +28,7 @@ export function postStream(
 			url,
 			{
 				method: "POST",
-				headers: { ...headers, "content-type": "application/json", "content-length": Buffer.byteLength(payload) },
+				headers: { ...headers, "content-type": "application/json", "content-length": new TextEncoder().encode(payload).length },
 			},
 			(res) => {
 				res.setEncoding("utf8");

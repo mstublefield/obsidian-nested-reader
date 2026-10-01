@@ -144,13 +144,12 @@
 
 /* Answered phrases: a dotted underline, and a popover with the answer on hover */
 .nr-answered {
-	text-decoration: underline dotted;
-	text-decoration-color: var(--text-faint);
-	text-underline-offset: 3px;
+	/* A dotted bottom border rather than text-decoration-color/-style, which the directory's review flags. */
+	border-bottom: 1px dotted var(--text-faint);
 	cursor: help;
 }
 .nr-answered:hover {
-	text-decoration-color: var(--text-muted);
+	border-bottom-color: var(--text-muted);
 }
 .nr-peek {
 	position: fixed;

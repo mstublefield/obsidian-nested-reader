@@ -125,7 +125,8 @@ As required by Obsidian's [developer policies](https://docs.obsidian.md/Communit
 - **An account is required.** Answers come from an AI service you choose: Claude (Anthropic), OpenAI, Grok (xAI) or Perplexity. You need an account with one of them.
 - **Payment may be required.** The plugin is free, but the services are not: you use either a paid plan (Claude or ChatGPT, through their command-line tools) or an API key billed by the provider. The plugin never charges you anything itself.
 - **Network use.** The highlighted text, its paragraph, related notes and, when vault search is on, notes the model reads are sent to the service you chose. See [Network use](#network-use) and [Limitations](#limitations).
-- **Files outside the vault.** With a plan connection, the plugin runs the `claude` or `codex` command-line tool installed on your computer and gives it a scratch folder in your system's temporary directory. With the ChatGPT plan, `codex`'s read-only sandbox can read files outside the vault (see [Limitations](#limitations)). With an API key, nothing outside the vault is touched.
+- **Files outside the vault and running programs.** The plugin uses Node's `child_process` and `fs` modules for one purpose: the plan connections. It looks for the `claude` or `codex` command-line tool in the usual install folders, runs it, and gives it a scratch folder in your system's temporary directory. With the ChatGPT plan, `codex`'s read-only sandbox can read files outside the vault (see [Limitations](#limitations)). With an API key, the plugin runs no programs and touches nothing outside the vault.
+- **Vault-wide access.** To show the Nested pages panel and to let the model search your notes, the plugin lists the notes in your vault and reads their front matter; vault search reads note text on demand, skipping the folders you exclude.
 - **No telemetry, no ads.** The plugin collects nothing about you and shows no ads.
 
 ## Network use
