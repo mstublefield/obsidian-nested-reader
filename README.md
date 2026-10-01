@@ -10,7 +10,7 @@ Child notes record where they came from in front matter (`source`, `question`, `
 
 This is an Obsidian port of [Nested Reader](https://nestedreader.app/) by True Frontier. See [NOTICE.md](NOTICE.md) for attribution. The original app is on the `upstream-app` branch.
 
-> **Status:** early development. It is desktop only, and it is not in the community plugin directory.
+> **Status:** early release (0.1.0). Desktop only (macOS, Windows, Linux).
 
 ## How to use
 
@@ -118,6 +118,16 @@ Other limits:
 - **The `.obsidian` folder is never readable** through the Claude plan, because other plugins keep settings and tokens there.
 - **Desktop only.** The plan connections run command-line tools, and streaming uses Node's networking.
 
+## Disclosures
+
+As required by Obsidian's [developer policies](https://docs.obsidian.md/Community+directory/Developer+policies):
+
+- **An account is required.** Answers come from an AI service you choose: Claude (Anthropic), OpenAI, Grok (xAI) or Perplexity. You need an account with one of them.
+- **Payment may be required.** The plugin is free, but the services are not: you use either a paid plan (Claude or ChatGPT, through their command-line tools) or an API key billed by the provider. The plugin never charges you anything itself.
+- **Network use.** The highlighted text, its paragraph, related notes and, when vault search is on, notes the model reads are sent to the service you chose. See [Network use](#network-use) and [Limitations](#limitations).
+- **Files outside the vault.** With a plan connection, the plugin runs the `claude` or `codex` command-line tool installed on your computer and gives it a scratch folder in your system's temporary directory. With the ChatGPT plan, `codex`'s read-only sandbox can read files outside the vault (see [Limitations](#limitations)). With an API key, nothing outside the vault is touched.
+- **No telemetry, no ads.** The plugin collects nothing about you and shows no ads.
+
 ## Network use
 
 When you ask a question, the highlighted text, its paragraph, and (depending on your context settings) other notes from the vault are sent to the service you choose in settings: Claude, OpenAI, Grok (xAI) or Perplexity. Claude and OpenAI can be reached two ways:
@@ -147,3 +157,5 @@ The dev vault at `~/Documents/Obsidian/Nested Dev` links this repo in as `.obsid
 ## License
 
 [MIT](LICENSE). Built on [Nested Reader](https://github.com/truefrontier/nested-reader) by Kevin Kirchner (True Frontier), also MIT-licensed; the original copyright notice is kept in LICENSE.
+
+**Credits:** the reading model (Quick Answer, New Page, Deep Dive), the prompts and the ranking and session-map helpers are Kevin Kirchner's work in Nested Reader; this port was made with his approval ([truefrontier/nested-reader#75](https://github.com/truefrontier/nested-reader/issues/75)).
