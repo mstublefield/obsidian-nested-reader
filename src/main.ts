@@ -89,7 +89,7 @@ export default class NestedReaderPlugin extends Plugin {
 			list: (path) => this.answers.list(path),
 			isOpen: (id) => this.cards.isOpen(id),
 		};
-		this.registerEditorExtension([cardExtension(), answeredExtension(answered)]);
+		this.registerEditorExtension([cardExtension(() => this.cards.scheduleSweep()), answeredExtension(answered)]);
 		this.registerMarkdownPostProcessor((el, ctx) => {
 			markAnswered(answered, el, ctx);
 			// A re-render may have dropped a card that was open in this view.
@@ -110,18 +110,35 @@ export default class NestedReaderPlugin extends Plugin {
 			this.cards.closeAll();
 		});
 
-		// The main window plus any pop-out window, now and later.
+		// The main window plus any pop-out window, now and later. A pop-out's listeners are removed when it
+		// closes; holding them until unload would keep the closed window's whole document alive.
+		const watchers = new Map<Document, () => void>();
+		const unwatch = (doc: Document) => {
+			watchers.get(doc)?.();
+			watchers.delete(doc);
+		};
 		const watch = (doc: Document) => {
-			this.register(this.pill.watch(doc));
-			this.register(this.peek.watch(doc));
+			unwatch(doc);
+			const stopPill = this.pill.watch(doc);
+			const stopPeek = this.peek.watch(doc);
+			watchers.set(doc, () => {
+				stopPill();
+				stopPeek();
+			});
 		};
 		watch(document);
+		this.register(() => {
+			for (const doc of [...watchers.keys()]) unwatch(doc);
+		});
 		this.registerEvent(this.app.workspace.on("window-open", (_w, win) => watch(win.document)));
+		this.registerEvent(this.app.workspace.on("window-close", (_w, win) => unwatch(win.document)));
 
 		// Cards whose editor or Reading view is gone must not keep streaming into nothing.
 		const sweep = () => this.cards.scheduleSweep();
 		this.registerEvent(this.app.workspace.on("layout-change", sweep));
 		this.registerEvent(this.app.workspace.on("active-leaf-change", sweep));
+		// Switching notes in the same tab gives the editor a fresh state with no cards in it.
+		this.registerEvent(this.app.workspace.on("file-open", sweep));
 		this.registerEvent(this.app.workspace.on("file-open", () => this.refreshAnswers(undefined, false)));
 
 		this.registerEvent(

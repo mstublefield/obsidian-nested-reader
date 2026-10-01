@@ -6,7 +6,7 @@ import type NestedReaderPlugin from "../main";
 import type { AskTarget } from "../reader/target";
 import { recordToSaved, shouldRemember } from "../store/answers-core";
 import { AnswerCard } from "./answer-card";
-import { cmView, placeCard, unplaceCard } from "./card-host";
+import { cardIds, cmView, placeCard, unplaceCard } from "./card-host";
 
 type Open = {
 	card: AnswerCard;
@@ -63,8 +63,15 @@ export class CardManager {
 				return;
 			}
 			placeCard(view, target.anchor, card);
-			// The widget's element leaves the page when scrolled out of the viewport, so watch the editor itself.
-			entry = { card, path, remove: () => unplaceCard(view, card.id), alive: () => view.dom.isConnected, previewEl: null };
+			// The widget's element leaves the page when scrolled out of the viewport, so watch the editor itself,
+			// and the editor's state: an edit across the anchor, or the tab switching notes, drops the card from it.
+			entry = {
+				card,
+				path,
+				remove: () => unplaceCard(view, card.id),
+				alive: () => view.dom.isConnected && cardIds(view.state).has(card.id),
+				previewEl: null,
+			};
 		} else {
 			target.block.insertAdjacentElement("afterend", card.el);
 			entry = { card, path, remove: () => card.el.remove(), alive: () => card.el.isConnected, previewEl: card.el };
